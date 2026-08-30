@@ -66,10 +66,10 @@ export default function Home() {
             <a href="/login" className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100">
               Login
             </a>
-
-            <button className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800">
+<a
+             href="/register" className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800">
               Join as Teacher
-            </button>
+            </a>
           </div>
         </div>
       </nav>
