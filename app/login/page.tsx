@@ -35,7 +35,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/student");
+    router.push("/student/dashboard");
   }
 
   return (
