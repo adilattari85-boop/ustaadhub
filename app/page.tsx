@@ -63,9 +63,9 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100">
+            <a herf="/login" className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100">
               Login
-            </button>
+            </a>
 
             <button className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800">
               Join as Teacher
