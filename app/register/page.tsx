@@ -1,7 +1,8 @@
 "use client";
+
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+
 const subjects = [
   "Quran & Tajweed",
   "Hifz-ul-Quran",
@@ -18,7 +19,6 @@ const subjects = [
 const languages = ["Hindi", "Urdu", "English", "Arabic"];
 
 export default function RegisterTeacher() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,117 +50,242 @@ export default function RegisterTeacher() {
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-  event.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-  setError("");
+    setError("");
+    setLoading(true);
 
-  // Basic validation
-  if (!name.trim()) {
-    setError("Please enter your full name.");
-    return;
-  }
+    try {
+      // =========================
+      // 1. VALIDATION
+      // =========================
 
-  if (!email.trim()) {
-    setError("Please enter your email address.");
-    return;
-  }
+      if (!name.trim()) {
+        setError("Please enter your full name.");
+        setLoading(false);
+        return;
+      }
 
-  if (!phone.trim()) {
-    setError("Please enter your phone number.");
-    return;
-  }
+      if (!email.trim()) {
+        setError("Please enter your email address.");
+        setLoading(false);
+        return;
+      }
 
-  if (!gender) {
-    setError("Please select your gender.");
-    return;
-  }
+      if (!phone.trim()) {
+        setError("Please enter your phone number.");
+        setLoading(false);
+        return;
+      }
 
-  if (!qualification.trim()) {
-    setError("Please enter your qualification.");
-    return;
-  }
+      if (!gender) {
+        setError("Please select your gender.");
+        setLoading(false);
+        return;
+      }
 
-  if (!experience) {
-    setError("Please select your teaching experience.");
-    return;
-  }
+      if (!qualification.trim()) {
+        setError("Please enter your qualification.");
+        setLoading(false);
+        return;
+      }
 
-  if (selectedSubjects.length === 0) {
-    setError("Please select at least one subject.");
-    return;
-  }
+      if (!experience) {
+        setError("Please select your teaching experience.");
+        setLoading(false);
+        return;
+      }
 
-  if (selectedLanguages.length === 0) {
-    setError("Please select at least one language.");
-    return;
-  }
+      if (selectedSubjects.length === 0) {
+        setError("Please select at least one subject.");
+        setLoading(false);
+        return;
+      }
 
-  if (!feeWeekly && !feeMonthly) {
-    setError("Please enter either weekly fee or monthly fee.");
-    return;
-  }
+      if (selectedLanguages.length === 0) {
+        setError("Please select at least one language.");
+        setLoading(false);
+        return;
+      }
 
-  if (!bio.trim()) {
-    setError("Please write a short introduction about yourself.");
-    return;
-  }
+      if (!feeWeekly && !feeMonthly) {
+        setError("Please enter either weekly fee or monthly fee.");
+        setLoading(false);
+        return;
+      }
 
-  if (password.length < 8) {
-    setError("Password must be at least 8 characters.");
-    return;
-  }
+      if (!bio.trim()) {
+        setError("Please write a short introduction about yourself.");
+        setLoading(false);
+        return;
+      }
 
-  if (password !== confirmPassword) {
-    setError("Passwords do not match.");
-    return;
-  }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        setLoading(false);
+        return;
+      }
 
-  setLoading(true);
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        setLoading(false);
+        return;
+      }
 
-  try {
-    // 1. Create Supabase Auth account
-    const { data: authData, error: authError } =
-      await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            name: name.trim(),
-            phone: phone.trim(),
-            role: "teacher",
-            gender,
-            qualification: qualification.trim(),
+      // =========================
+      // 2. CREATE SUPABASE AUTH USER
+      // =========================
+
+      console.log("CREATING TEACHER AUTH ACCOUNT...");
+
+      const { data: authData, error: authError } =
+        await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              name: name.trim(),
+              phone: phone.trim(),
+              role: "teacher",
+              gender,
+              qualification: qualification.trim(),
+            },
           },
+        });
+
+      if (authError) {
+        console.error("AUTH ERROR:", authError);
+
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!authData.user) {
+        console.error("NO USER RETURNED FROM SIGNUP");
+
+        setError("Teacher account could not be created.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("TEACHER AUTH USER CREATED:", authData.user.id);
+      console.log("SIGNUP SESSION:", authData.session);
+
+      // =========================
+      // 3. MAKE SURE USER IS AUTHENTICATED
+      // =========================
+
+      let authenticatedUser = authData.user;
+      let authenticatedSession = authData.session;
+
+      /*
+        IMPORTANT:
+
+        RLS requires:
+
+        auth.uid() = user_id
+
+        If signUp returns user but no session,
+        we login immediately.
+      */
+
+      if (!authenticatedSession) {
+        console.log("NO SESSION AFTER SIGNUP. TRYING AUTO LOGIN...");
+
+        const { data: loginData, error: loginError } =
+          await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+
+        if (loginError) {
+          console.error("AUTO LOGIN ERROR:", loginError);
+
+          setError(
+            "Teacher account was created, but automatic login failed: " +
+              loginError.message
+          );
+
+          setLoading(false);
+          return;
+        }
+
+        if (!loginData.session || !loginData.user) {
+          console.error("AUTO LOGIN DID NOT RETURN SESSION");
+
+          setError(
+            "Teacher account was created, but an authenticated session could not be established."
+          );
+
+          setLoading(false);
+          return;
+        }
+
+        authenticatedSession = loginData.session;
+        authenticatedUser = loginData.user;
+
+        console.log(
+          "AUTO LOGIN SUCCESS:",
+          authenticatedUser.id
+        );
+      }
+
+      // =========================
+      // 4. VERIFY CURRENT SESSION
+      // =========================
+
+      const {
+        data: {
+          session: currentSession,
         },
-      });
+      } = await supabase.auth.getSession();
 
-    if (authError) {
-      console.error("AUTH ERROR:", authError);
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
+      console.log("CURRENT SUPABASE SESSION:", currentSession);
 
-    const user = authData.user;
+      if (!currentSession?.user) {
+        setError(
+          "Teacher account was created, but the authenticated session is not available."
+        );
 
-    if (!user) {
-      setError("Teacher account could not be created.");
-      setLoading(false);
-      return;
-    }
+        setLoading(false);
+        return;
+      }
 
-    // 2. Save complete teacher profile
-    const { error: profileError } = await supabase
-      .from("teacher_profiles")
-      .insert({
-        id: user.id,
-        user_id: user.id,
+      // Use the ACTUAL authenticated user
+      authenticatedUser = currentSession.user;
+
+      console.log(
+        "FINAL AUTHENTICATED USER ID:",
+        authenticatedUser.id
+      );
+const {
+  data: { user: verifiedUser },
+  error: verifiedUserError,
+} = await supabase.auth.getUser();
+
+console.log("========== AUTH CHECK ==========");
+console.log("VERIFIED USER:", verifiedUser);
+console.log("VERIFIED USER ID:", verifiedUser?.id);
+console.log("AUTH ERROR:", verifiedUserError);
+console.log("AUTHENTICATED USER ID:", authenticatedUser.id);
+console.log("================================");
+      // =========================
+      // 5. SAVE TEACHER PROFILE
+      // =========================
+
+      console.log("SAVING TEACHER PROFILE...");
+
+      const teacherProfile = {
+        id: authenticatedUser.id,
+        user_id: authenticatedUser.id,
 
         full_name: name.trim(),
         phone: phone.trim(),
 
         bio: bio.trim(),
+
         subjects: selectedSubjects,
         experience: experience,
         languages: selectedLanguages,
@@ -178,129 +303,97 @@ export default function RegisterTeacher() {
         profile_photo_url: null,
 
         is_verified: false,
-      });
+      };
 
-    if (profileError) {
-      console.error("PROFILE ERROR:", profileError);
+      console.log(
+        "TEACHER PROFILE DATA:",
+        teacherProfile
+      );
+
+      // 2. Save complete teacher profile using secure RPC
+console.log("SAVING TEACHER PROFILE VIA RPC...");
+
+const { data: profileData, error: profileError } =
+  await supabase.rpc("create_teacher_profile", {
+    p_full_name: name.trim(),
+    p_phone: phone.trim(),
+    p_bio: bio.trim(),
+    p_subjects: selectedSubjects,
+    p_experience: experience,
+    p_languages: selectedLanguages,
+    p_teaching_mode: mode,
+    p_fee_weekly: feeWeekly
+      ? Number(feeWeekly)
+      : null,
+    p_fee_monthly: feeMonthly
+      ? Number(feeMonthly)
+      : null,
+    p_profile_photo_url: null,
+  });
+
+if (profileError) {
+  console.error("PROFILE RPC ERROR:", profileError);
+
+  setError(
+    "Teacher account was created, but the profile could not be saved: " +
+      profileError.message
+  );
+
+  setLoading(false);
+  return;
+}
+
+console.log("TEACHER PROFILE SAVED:", profileData);
+
+      if (profileError) {
+        console.error(
+          "TEACHER PROFILE ERROR:",
+          profileError
+        );
+
+        setError(
+          "Teacher account was created, but the profile could not be saved: " +
+            profileError
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      console.log(
+        "TEACHER PROFILE SAVED SUCCESSFULLY:",
+        profileData
+      );
+
+      // =========================
+      // 6. SUCCESS
+      // =========================
+
+      setLoading(false);
+      setSubmitted(true);
+
+    } catch (err) {
+      console.error("REGISTRATION ERROR:", err);
 
       setError(
-        "Teacher account was created, but the profile could not be saved. " +
-          profileError.message
+        "Something went wrong while creating your teacher account. Please try again."
       );
 
       setLoading(false);
-      return;
     }
-
-    // 3. Success
-    setLoading(false);
-    setSubmitted(true);
-
-  } catch (err) {
-    console.error("REGISTRATION ERROR:", err);
-
-    setError(
-      "Something went wrong while creating your teacher account. Please try again."
-    );
-
-    setLoading(false);
   }
-}    event.preventDefault();
 
-    setError("");
-
-    if (selectedSubjects.length === 0) {
-      setError("Please select at least one subject.");
-      return;
-    }
-
-    if (selectedLanguages.length === 0) {
-      setError("Please select at least one language.");
-      return;
-    }
-
-    if (!feeWeekly && !feeMonthly) {
-      setError("Please enter either weekly fee or monthly fee.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setLoading(true);
-
-    // 1. Create Supabase Auth account
-    const { data: authData, error: authError } =
-      await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone,
-            role: "teacher",
-          },
-        },
-      });
-
-    if (authError) {
-      setLoading(false);
-      setError(authError.message);
-      return;
-    }
-
-    const user = authData.user;
-
-    if (!user) {
-      setLoading(false);
-      setError("Account could not be created.");
-      return;
-    }
-
-    // 2. Save teacher profile
-    const { error: profileError } = await supabase
-      .from("teacher_profiles")
-      .insert({
-        id: user.id,
-        full_name: name,
-        phone: phone,
-        bio: bio,
-        subjects: selectedSubjects,
-        languages: selectedLanguages,
-        teaching_mode: mode,
-        fee_weekly: feeWeekly ? Number(feeWeekly) : null,
-        fee_monthly: feeMonthly ? Number(feeMonthly) : null,
-        is_verified: false,
-      });
-
-    if (profileError) {
-      setLoading(false);
-
-      // Account was created but profile failed.
-      setError(
-        "Account created, but teacher profile could not be saved: " +
-          profileError.message
-      );
-
-      return;
-    }
-
-    setLoading(false);
-    setSubmitted(true);
-  }
+  // =========================
+  // SUCCESS SCREEN
+  // =========================
 
   if (submitted) {
     return (
       <main className="min-h-screen bg-slate-50">
+
         <header className="border-b bg-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+
             <a
               href="/"
               className="text-3xl font-bold text-blue-600"
@@ -314,10 +407,12 @@ export default function RegisterTeacher() {
             >
               Login
             </a>
+
           </div>
         </header>
 
         <section className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6">
+
           <div className="w-full max-w-xl rounded-3xl border bg-white p-10 text-center shadow-lg">
 
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-4xl text-green-700">
@@ -329,12 +424,17 @@ export default function RegisterTeacher() {
             </h1>
 
             <p className="mt-4 leading-7 text-slate-600">
-              Your teacher account and profile have been successfully
-              saved. Your profile will remain unverified until reviewed
-              by the UstaadHub admin.
+              Your teacher account and profile have been
+              successfully created and saved.
+            </p>
+
+            <p className="mt-3 leading-7 text-slate-600">
+              Your profile will remain unverified until it is
+              reviewed by the UstaadHub admin.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+
               <a
                 href="/login"
                 className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
@@ -348,19 +448,28 @@ export default function RegisterTeacher() {
               >
                 Find Teachers
               </a>
+
             </div>
 
           </div>
+
         </section>
+
       </main>
     );
   }
+
+  // =========================
+  // REGISTRATION FORM
+  // =========================
 
   return (
     <main className="min-h-screen bg-slate-50">
 
       {/* HEADER */}
+
       <header className="border-b bg-white">
+
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
 
           <a
@@ -378,10 +487,13 @@ export default function RegisterTeacher() {
           </a>
 
         </div>
+
       </header>
 
       {/* INTRO */}
+
       <section className="bg-gradient-to-b from-blue-50 to-slate-50 px-6 py-14">
+
         <div className="mx-auto max-w-4xl">
 
           <p className="font-semibold text-blue-600">
@@ -393,15 +505,18 @@ export default function RegisterTeacher() {
           </h1>
 
           <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-            Share your knowledge, connect with students and grow your
-            teaching journey with UstaadHub.
+            Share your knowledge, connect with students and grow
+            your teaching journey with UstaadHub.
           </p>
 
         </div>
+
       </section>
 
       {/* FORM */}
+
       <section className="px-6 py-12">
+
         <div className="mx-auto max-w-4xl">
 
           <form
@@ -409,7 +524,8 @@ export default function RegisterTeacher() {
             className="space-y-8"
           >
 
-            {/* PERSONAL */}
+            {/* PERSONAL INFORMATION */}
+
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
               <h2 className="text-2xl font-bold">
@@ -419,6 +535,7 @@ export default function RegisterTeacher() {
               <div className="mt-6 grid gap-5 md:grid-cols-2">
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Full Name *
                   </label>
@@ -426,14 +543,18 @@ export default function RegisterTeacher() {
                   <input
                     required
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) =>
+                      setName(e.target.value)
+                    }
                     type="text"
                     placeholder="Enter your full name"
                     className="w-full rounded-xl border px-4 py-3 outline-none focus:border-blue-500"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Email Address *
                   </label>
@@ -441,14 +562,18 @@ export default function RegisterTeacher() {
                   <input
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) =>
+                      setEmail(e.target.value)
+                    }
                     type="email"
                     placeholder="you@example.com"
                     className="w-full rounded-xl border px-4 py-3 outline-none focus:border-blue-500"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Mobile Number *
                   </label>
@@ -456,34 +581,53 @@ export default function RegisterTeacher() {
                   <input
                     required
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) =>
+                      setPhone(e.target.value)
+                    }
                     type="tel"
                     placeholder="+91 XXXXX XXXXX"
                     className="w-full rounded-xl border px-4 py-3 outline-none focus:border-blue-500"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
-                    Gender
+                    Gender *
                   </label>
 
                   <select
+                    required
                     value={gender}
-                    onChange={(e) => setGender(e.target.value)}
+                    onChange={(e) =>
+                      setGender(e.target.value)
+                    }
                     className="w-full rounded-xl border bg-white px-4 py-3"
                   >
-                    <option value="">Select gender</option>
-                    <option>Male</option>
-                    <option>Female</option>
+
+                    <option value="">
+                      Select gender
+                    </option>
+
+                    <option value="Male">
+                      Male
+                    </option>
+
+                    <option value="Female">
+                      Female
+                    </option>
+
                   </select>
+
                 </div>
 
               </div>
 
             </div>
 
-            {/* TEACHING */}
+            {/* TEACHING INFORMATION */}
+
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
               <h2 className="text-2xl font-bold">
@@ -493,6 +637,7 @@ export default function RegisterTeacher() {
               <div className="mt-6 grid gap-5 md:grid-cols-2">
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Qualification *
                   </label>
@@ -500,14 +645,18 @@ export default function RegisterTeacher() {
                   <input
                     required
                     value={qualification}
-                    onChange={(e) => setQualification(e.target.value)}
+                    onChange={(e) =>
+                      setQualification(e.target.value)
+                    }
                     type="text"
                     placeholder="e.g. Aalim, B.A., M.A."
                     className="w-full rounded-xl border px-4 py-3"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Teaching Experience *
                   </label>
@@ -515,19 +664,43 @@ export default function RegisterTeacher() {
                   <select
                     required
                     value={experience}
-                    onChange={(e) => setExperience(e.target.value)}
+                    onChange={(e) =>
+                      setExperience(e.target.value)
+                    }
                     className="w-full rounded-xl border bg-white px-4 py-3"
                   >
-                    <option value="">Select experience</option>
-                    <option>Less than 1 year</option>
-                    <option>1–3 years</option>
-                    <option>3–5 years</option>
-                    <option>5–10 years</option>
-                    <option>10+ years</option>
+
+                    <option value="">
+                      Select experience
+                    </option>
+
+                    <option>
+                      Less than 1 year
+                    </option>
+
+                    <option>
+                      1–3 years
+                    </option>
+
+                    <option>
+                      3–5 years
+                    </option>
+
+                    <option>
+                      5–10 years
+                    </option>
+
+                    <option>
+                      10+ years
+                    </option>
+
                   </select>
+
                 </div>
 
               </div>
+
+              {/* SUBJECTS */}
 
               <div className="mt-7">
 
@@ -538,6 +711,7 @@ export default function RegisterTeacher() {
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
 
                   {subjects.map((subject) => (
+
                     <label
                       key={subject}
                       className={`cursor-pointer rounded-xl border p-3 text-sm ${
@@ -546,10 +720,13 @@ export default function RegisterTeacher() {
                           : "hover:border-blue-300"
                       }`}
                     >
+
                       <input
                         type="checkbox"
                         className="mr-2"
-                        checked={selectedSubjects.includes(subject)}
+                        checked={selectedSubjects.includes(
+                          subject
+                        )}
                         onChange={() =>
                           toggleItem(
                             subject,
@@ -560,12 +737,16 @@ export default function RegisterTeacher() {
                       />
 
                       {subject}
+
                     </label>
+
                   ))}
 
                 </div>
 
               </div>
+
+              {/* LANGUAGES */}
 
               <div className="mt-7">
 
@@ -576,6 +757,7 @@ export default function RegisterTeacher() {
                 <div className="mt-3 flex flex-wrap gap-3">
 
                   {languages.map((language) => (
+
                     <label
                       key={language}
                       className={`cursor-pointer rounded-xl border px-4 py-3 text-sm ${
@@ -584,10 +766,13 @@ export default function RegisterTeacher() {
                           : "hover:border-blue-300"
                       }`}
                     >
+
                       <input
                         type="checkbox"
                         className="mr-2"
-                        checked={selectedLanguages.includes(language)}
+                        checked={selectedLanguages.includes(
+                          language
+                        )}
                         onChange={() =>
                           toggleItem(
                             language,
@@ -598,7 +783,9 @@ export default function RegisterTeacher() {
                       />
 
                       {language}
+
                     </label>
+
                   ))}
 
                 </div>
@@ -607,7 +794,8 @@ export default function RegisterTeacher() {
 
             </div>
 
-            {/* FEES */}
+            {/* CLASSES & FEES */}
+
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
               <h2 className="text-2xl font-bold">
@@ -622,20 +810,26 @@ export default function RegisterTeacher() {
 
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
 
-                  {["Online", "Offline", "Both"].map((item) => (
-                    <button
-                      type="button"
-                      key={item}
-                      onClick={() => setMode(item)}
-                      className={`rounded-xl border p-4 font-medium ${
-                        mode === item
-                          ? "border-blue-600 bg-blue-50 text-blue-700"
-                          : "hover:border-blue-300"
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
+                  {["Online", "Offline", "Both"].map(
+                    (item) => (
+
+                      <button
+                        type="button"
+                        key={item}
+                        onClick={() =>
+                          setMode(item)
+                        }
+                        className={`rounded-xl border p-4 font-medium ${
+                          mode === item
+                            ? "border-blue-600 bg-blue-50 text-blue-700"
+                            : "hover:border-blue-300"
+                        }`}
+                      >
+                        {item}
+                      </button>
+
+                    )
+                  )}
 
                 </div>
 
@@ -644,44 +838,54 @@ export default function RegisterTeacher() {
               <div className="mt-6 grid gap-5 md:grid-cols-2">
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Weekly Fee (₹)
                   </label>
 
                   <input
                     value={feeWeekly}
-                    onChange={(e) => setFeeWeekly(e.target.value)}
+                    onChange={(e) =>
+                      setFeeWeekly(e.target.value)
+                    }
                     type="number"
                     min="0"
                     placeholder="e.g. 800"
                     className="w-full rounded-xl border px-4 py-3"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Monthly Fee (₹)
                   </label>
 
                   <input
                     value={feeMonthly}
-                    onChange={(e) => setFeeMonthly(e.target.value)}
+                    onChange={(e) =>
+                      setFeeMonthly(e.target.value)
+                    }
                     type="number"
                     min="0"
                     placeholder="e.g. 3000"
                     className="w-full rounded-xl border px-4 py-3"
                   />
+
                 </div>
 
               </div>
 
               <p className="mt-2 text-xs text-slate-500">
-                Enter weekly, monthly, or both. At least one is required.
+                Enter weekly, monthly, or both. At least one is
+                required.
               </p>
 
             </div>
 
             {/* ABOUT */}
+
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
               <h2 className="text-2xl font-bold">
@@ -697,7 +901,9 @@ export default function RegisterTeacher() {
                 <textarea
                   required
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={(e) =>
+                    setBio(e.target.value)
+                  }
                   rows={7}
                   placeholder="Tell students about your teaching experience, teaching style and what makes your classes special..."
                   className="w-full resize-none rounded-xl border px-4 py-3 leading-7"
@@ -708,6 +914,7 @@ export default function RegisterTeacher() {
             </div>
 
             {/* ACCOUNT */}
+
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
               <h2 className="text-2xl font-bold">
@@ -717,6 +924,7 @@ export default function RegisterTeacher() {
               <div className="mt-6 grid gap-5 md:grid-cols-2">
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Password *
                   </label>
@@ -724,15 +932,19 @@ export default function RegisterTeacher() {
                   <input
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
                     type="password"
                     minLength={8}
                     placeholder="Minimum 8 characters"
                     className="w-full rounded-xl border px-4 py-3"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="mb-2 block text-sm font-semibold">
                     Confirm Password *
                   </label>
@@ -741,13 +953,16 @@ export default function RegisterTeacher() {
                     required
                     value={confirmPassword}
                     onChange={(e) =>
-                      setConfirmPassword(e.target.value)
+                      setConfirmPassword(
+                        e.target.value
+                      )
                     }
                     type="password"
                     minLength={8}
                     placeholder="Repeat your password"
                     className="w-full rounded-xl border px-4 py-3"
                   />
+
                 </div>
 
               </div>
@@ -755,6 +970,7 @@ export default function RegisterTeacher() {
             </div>
 
             {/* SUBMIT */}
+
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
               {error && (
@@ -764,6 +980,7 @@ export default function RegisterTeacher() {
               )}
 
               <label className="mt-4 flex gap-3 text-sm text-slate-600">
+
                 <input
                   required
                   type="checkbox"
@@ -771,9 +988,11 @@ export default function RegisterTeacher() {
                 />
 
                 <span>
-                  I confirm that the information provided is accurate
-                  and I agree to the UstaadHub terms and privacy policy.
+                  I confirm that the information provided is
+                  accurate and I agree to the UstaadHub terms
+                  and privacy policy.
                 </span>
+
               </label>
 
               <button
@@ -781,13 +1000,16 @@ export default function RegisterTeacher() {
                 disabled={loading}
                 className="mt-7 w-full rounded-xl bg-blue-600 py-4 text-lg font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
+
                 {loading
                   ? "Creating Teacher Account..."
                   : "Create Teacher Profile"}
+
               </button>
 
               <p className="mt-4 text-center text-xs text-slate-500">
-                Your profile may be reviewed before becoming publicly visible.
+                Your profile may be reviewed before becoming
+                publicly visible.
               </p>
 
             </div>
@@ -795,12 +1017,15 @@ export default function RegisterTeacher() {
           </form>
 
         </div>
+
       </section>
 
       <footer className="border-t bg-white">
+
         <div className="mx-auto max-w-7xl px-6 py-8 text-center text-sm text-slate-500">
           © 2026 UstaadHub. All rights reserved.
         </div>
+
       </footer>
 
     </main>
