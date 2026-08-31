@@ -1,7 +1,5 @@
 "use client";
 
-console.log("NEW ADMIN PAGE LOADED");
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -24,6 +22,7 @@ type Requirement = {
   city_location: string | null;
   additional_requirement: string | null;
   created_at: string;
+  status?: string | null;
 };
 
 const statuses = ["All", "New", "Contacted", "Matched"];
@@ -41,42 +40,90 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
-      .from("learning_requirements")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      // 1. Check Supabase login session
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error("ADMIN REQUIREMENTS ERROR:", error);
-      setError(error.message);
+      console.log("ADMIN SESSION:", session);
+
+      if (sessionError) {
+        console.error("SESSION ERROR:", sessionError);
+        setError("Could not verify admin login.");
+        setRequirements([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!session) {
+        console.error("NO SUPABASE SESSION");
+        setError(
+          "Admin login session is missing. Please log in again and then open /admin."
+        );
+        setRequirements([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log("LOGGED IN USER:", session.user.id);
+      console.log("LOGGED IN EMAIL:", session.user.email);
+
+      // 2. Load REAL requirements from Supabase
+      const {
+        data,
+        error: requirementsError,
+      } = await supabase
+        .from("learning_requirements")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      console.log("SUPABASE REQUIREMENTS:", data);
+      console.log("SUPABASE REQUIREMENTS ERROR:", requirementsError);
+
+      if (requirementsError) {
+        console.error(
+          "ADMIN REQUIREMENTS ERROR:",
+          requirementsError
+        );
+
+        setError(requirementsError.message);
+        setRequirements([]);
+        setLoading(false);
+        return;
+      }
+
+      setRequirements((data || []) as Requirement[]);
       setLoading(false);
-      return;
-    }
+    } catch (err) {
+      console.error("ADMIN LOAD ERROR:", err);
 
-    setRequirements(data || []);
-    setLoading(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while loading requirements."
+      );
+
+      setRequirements([]);
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     loadRequirements();
   }, []);
 
+  const getStatus = (item: Requirement) => {
+    return item.status || "New";
+  };
+
   const filteredRequirements =
     filter === "All"
       ? requirements
-      : requirements.filter((item) => {
-          const status =
-            (item as Requirement & { status?: string }).status || "New";
-
-          return status === filter;
-        });
-
-  const getStatus = (item: Requirement) => {
-    const status =
-      (item as Requirement & { status?: string }).status || "New";
-
-    return status;
-  };
+      : requirements.filter(
+          (item) => getStatus(item) === filter
+        );
 
   const newCount = requirements.filter(
     (item) => getStatus(item) === "New"
@@ -410,13 +457,11 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* BASIC DETAILS */}
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl bg-slate-50 p-4">
                 <p className="text-xs text-slate-500">
                   Student Name
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.parent_student_name ||
                     "Not provided"}
@@ -427,7 +472,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Phone
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.mobile_number ||
                     "Not provided"}
@@ -438,7 +482,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Age
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.student_age || "-"}
                 </p>
@@ -448,7 +491,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Student Gender
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.student_gender || "-"}
                 </p>
@@ -458,7 +500,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Subjects
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.subjects?.join(", ") ||
                     "Not specified"}
@@ -469,7 +510,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Current Level
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.current_level || "-"}
                 </p>
@@ -479,7 +519,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Class Mode
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.class_mode || "-"}
                 </p>
@@ -489,10 +528,8 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Teacher Preference
                 </p>
-
                 <p className="mt-1 font-semibold">
-                  {selectedRequirement.teacher_gender ||
-                    "Any"}
+                  {selectedRequirement.teacher_gender || "Any"}
                 </p>
               </div>
 
@@ -500,7 +537,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Preferred Languages
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.preferred_languages?.join(
                     ", "
@@ -512,10 +548,8 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Classes Per Week
                 </p>
-
                 <p className="mt-1 font-semibold">
-                  {selectedRequirement.classes_per_week ||
-                    "-"}
+                  {selectedRequirement.classes_per_week || "-"}
                 </p>
               </div>
 
@@ -523,7 +557,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Preferred Time
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.preferred_time || "-"}
                 </p>
@@ -533,7 +566,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Preferred Days
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.preferred_days || "-"}
                 </p>
@@ -543,7 +575,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   Monthly Budget
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {formatBudget(
                     selectedRequirement.monthly_budget
@@ -555,7 +586,6 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500">
                   City / Location
                 </p>
-
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.city_location ||
                     "Not provided"}
@@ -563,7 +593,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* ADDITIONAL REQUIREMENT */}
             <div className="mt-5 rounded-xl bg-slate-50 p-5">
               <p className="text-xs text-slate-500">
                 Additional Requirement
@@ -575,12 +604,9 @@ export default function AdminPage() {
               </p>
             </div>
 
-            {/* ACTIONS */}
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={() =>
-                  setSelectedRequirement(null)
-                }
+                onClick={() => setSelectedRequirement(null)}
                 className="flex-1 rounded-xl border py-3 font-semibold hover:bg-slate-50"
               >
                 Close
