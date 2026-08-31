@@ -1,8 +1,7 @@
 "use client";
-
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-
 const subjects = [
   "Quran & Tajweed",
   "Hifz-ul-Quran",
@@ -19,6 +18,7 @@ const subjects = [
 const languages = ["Hindi", "Urdu", "English", "Arabic"];
 
 export default function RegisterTeacher() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,8 +50,162 @@ export default function RegisterTeacher() {
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+
+  setError("");
+
+  // Basic validation
+  if (!name.trim()) {
+    setError("Please enter your full name.");
+    return;
+  }
+
+  if (!email.trim()) {
+    setError("Please enter your email address.");
+    return;
+  }
+
+  if (!phone.trim()) {
+    setError("Please enter your phone number.");
+    return;
+  }
+
+  if (!gender) {
+    setError("Please select your gender.");
+    return;
+  }
+
+  if (!qualification.trim()) {
+    setError("Please enter your qualification.");
+    return;
+  }
+
+  if (!experience) {
+    setError("Please select your teaching experience.");
+    return;
+  }
+
+  if (selectedSubjects.length === 0) {
+    setError("Please select at least one subject.");
+    return;
+  }
+
+  if (selectedLanguages.length === 0) {
+    setError("Please select at least one language.");
+    return;
+  }
+
+  if (!feeWeekly && !feeMonthly) {
+    setError("Please enter either weekly fee or monthly fee.");
+    return;
+  }
+
+  if (!bio.trim()) {
+    setError("Please write a short introduction about yourself.");
+    return;
+  }
+
+  if (password.length < 8) {
+    setError("Password must be at least 8 characters.");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // 1. Create Supabase Auth account
+    const { data: authData, error: authError } =
+      await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            name: name.trim(),
+            phone: phone.trim(),
+            role: "teacher",
+            gender,
+            qualification: qualification.trim(),
+          },
+        },
+      });
+
+    if (authError) {
+      console.error("AUTH ERROR:", authError);
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    const user = authData.user;
+
+    if (!user) {
+      setError("Teacher account could not be created.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. Save complete teacher profile
+    const { error: profileError } = await supabase
+      .from("teacher_profiles")
+      .insert({
+        id: user.id,
+        user_id: user.id,
+
+        full_name: name.trim(),
+        phone: phone.trim(),
+
+        bio: bio.trim(),
+        subjects: selectedSubjects,
+        experience: experience,
+        languages: selectedLanguages,
+
+        teaching_mode: mode,
+
+        fee_weekly: feeWeekly
+          ? Number(feeWeekly)
+          : null,
+
+        fee_monthly: feeMonthly
+          ? Number(feeMonthly)
+          : null,
+
+        profile_photo_url: null,
+
+        is_verified: false,
+      });
+
+    if (profileError) {
+      console.error("PROFILE ERROR:", profileError);
+
+      setError(
+        "Teacher account was created, but the profile could not be saved. " +
+          profileError.message
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    // 3. Success
+    setLoading(false);
+    setSubmitted(true);
+
+  } catch (err) {
+    console.error("REGISTRATION ERROR:", err);
+
+    setError(
+      "Something went wrong while creating your teacher account. Please try again."
+    );
+
+    setLoading(false);
+  }
+}    event.preventDefault();
 
     setError("");
 
