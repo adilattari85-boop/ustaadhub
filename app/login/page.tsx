@@ -1,11 +1,22 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isTeacherLogin = searchParams.get("role") === "teacher";
+  const accountType = isTeacherLogin ? "teacher" : "student";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,18 +35,53 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: signInData, error: signInError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+    if (signInError) {
+      setError(signInError.message);
       setLoading(false);
       return;
     }
 
-    router.push("/student/dashboard");
+    if (!signInData.session || !signInData.user) {
+      setError("Login succeeded, but an authenticated session could not be established.");
+      setLoading(false);
+      return;
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setError(
+        userError?.message ||
+          "Login succeeded, but the authenticated user could not be verified."
+      );
+      setLoading(false);
+      return;
+    }
+
+    const role = user.user_metadata?.role;
+
+    if (role === "teacher") {
+      router.push("/teacher/dashboard");
+      return;
+    }
+
+    if (role === "student") {
+      router.push("/student/dashboard");
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setError("This account does not have a recognized role. Please contact support.");
+    setLoading(false);
   }
 
   return (
@@ -47,10 +93,10 @@ export default function LoginPage() {
           </a>
 
           <a
-            href="/signup"
+            href={isTeacherLogin ? "/register" : "/signup"}
             className="font-medium text-slate-700 hover:text-blue-600"
           >
-            Create Account
+            {isTeacherLogin ? "Create Teacher Profile" : "Create Account"}
           </a>
         </div>
       </header>
@@ -60,7 +106,7 @@ export default function LoginPage() {
           <div className="rounded-2xl border bg-white p-8 shadow-sm">
 
             <p className="font-semibold text-blue-600">
-              STUDENT LOGIN
+              {accountType.toUpperCase()} LOGIN
             </p>
 
             <h1 className="mt-2 text-3xl font-bold">
@@ -68,7 +114,7 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-3 text-slate-600">
-              Login to your UstaadHub student account and continue your
+              Login to your UstaadHub {accountType} account and continue your
               learning journey.
             </p>
 
@@ -131,10 +177,10 @@ export default function LoginPage() {
               <p className="text-center text-sm text-slate-600">
                 Don't have an account?{" "}
                 <a
-                  href="/signup"
+                  href={isTeacherLogin ? "/register" : "/signup"}
                   className="font-semibold text-blue-600 hover:underline"
                 >
-                  Sign Up
+                  {isTeacherLogin ? "Create Teacher Profile" : "Sign Up"}
                 </a>
               </p>
 

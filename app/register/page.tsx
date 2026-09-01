@@ -178,7 +178,6 @@ export default function RegisterTeacher() {
       // =========================
 
       let authenticatedUser = authData.user;
-      let authenticatedSession = authData.session;
 
       /*
         IMPORTANT:
@@ -191,7 +190,7 @@ export default function RegisterTeacher() {
         we login immediately.
       */
 
-      if (!authenticatedSession) {
+      if (!authData.session) {
         console.log("NO SESSION AFTER SIGNUP. TRYING AUTO LOGIN...");
 
         const { data: loginData, error: loginError } =
@@ -223,7 +222,6 @@ export default function RegisterTeacher() {
           return;
         }
 
-        authenticatedSession = loginData.session;
         authenticatedUser = loginData.user;
 
         console.log(
@@ -260,110 +258,37 @@ export default function RegisterTeacher() {
         "FINAL AUTHENTICATED USER ID:",
         authenticatedUser.id
       );
-const {
-  data: { user: verifiedUser },
-  error: verifiedUserError,
-} = await supabase.auth.getUser();
-
-console.log("========== AUTH CHECK ==========");
-console.log("VERIFIED USER:", verifiedUser);
-console.log("VERIFIED USER ID:", verifiedUser?.id);
-console.log("AUTH ERROR:", verifiedUserError);
-console.log("AUTHENTICATED USER ID:", authenticatedUser.id);
-console.log("================================");
       // =========================
       // 5. SAVE TEACHER PROFILE
       // =========================
 
-      console.log("SAVING TEACHER PROFILE...");
-
-      const teacherProfile = {
-        id: authenticatedUser.id,
-        user_id: authenticatedUser.id,
-
-        full_name: name.trim(),
-        phone: phone.trim(),
-
-        bio: bio.trim(),
-
-        subjects: selectedSubjects,
-        experience: experience,
-        languages: selectedLanguages,
-
-        teaching_mode: mode,
-
-        fee_weekly: feeWeekly
-          ? Number(feeWeekly)
-          : null,
-
-        fee_monthly: feeMonthly
-          ? Number(feeMonthly)
-          : null,
-
-        profile_photo_url: null,
-
-        is_verified: false,
-      };
-
-      console.log(
-        "TEACHER PROFILE DATA:",
-        teacherProfile
-      );
-
-      // 2. Save complete teacher profile using secure RPC
-console.log("SAVING TEACHER PROFILE VIA RPC...");
-
-const { data: profileData, error: profileError } =
-  await supabase.rpc("create_teacher_profile", {
-    p_full_name: name.trim(),
-    p_phone: phone.trim(),
-    p_bio: bio.trim(),
-    p_subjects: selectedSubjects,
-    p_experience: experience,
-    p_languages: selectedLanguages,
-    p_teaching_mode: mode,
-    p_fee_weekly: feeWeekly
-      ? Number(feeWeekly)
-      : null,
-    p_fee_monthly: feeMonthly
-      ? Number(feeMonthly)
-      : null,
-    p_profile_photo_url: null,
-  });
-
-if (profileError) {
-  console.error("PROFILE RPC ERROR:", profileError);
-
-  setError(
-    "Teacher account was created, but the profile could not be saved: " +
-      profileError.message
-  );
-
-  setLoading(false);
-  return;
-}
-
-console.log("TEACHER PROFILE SAVED:", profileData);
+      const { data: profileData, error: profileError } =
+        await supabase.rpc("create_teacher_profile", {
+          p_full_name: name.trim(),
+          p_phone: phone.trim(),
+          p_bio: bio.trim(),
+          p_subjects: selectedSubjects,
+          p_experience: experience,
+          p_languages: selectedLanguages,
+          p_teaching_mode: mode,
+          p_fee_weekly: feeWeekly ? Number(feeWeekly) : null,
+          p_fee_monthly: feeMonthly ? Number(feeMonthly) : null,
+          p_profile_photo_url: null,
+        });
 
       if (profileError) {
-        console.error(
-          "TEACHER PROFILE ERROR:",
-          profileError
-        );
+        console.error("PROFILE RPC ERROR:", profileError);
 
         setError(
           "Teacher account was created, but the profile could not be saved: " +
-            profileError
+            profileError.message
         );
 
         setLoading(false);
         return;
       }
 
-      console.log(
-        "TEACHER PROFILE SAVED SUCCESSFULLY:",
-        profileData
-      );
+      console.log("TEACHER PROFILE SAVED:", profileData);
 
       // =========================
       // 6. SUCCESS
@@ -436,7 +361,7 @@ console.log("TEACHER PROFILE SAVED:", profileData);
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
 
               <a
-                href="/login"
+                href="/login?role=teacher"
                 className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
               >
                 Login as Teacher
