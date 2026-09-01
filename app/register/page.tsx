@@ -405,10 +405,10 @@ export default function RegisterTeacher() {
           </a>
 
           <a
-            href="/teachers"
+            href="/login?role=teacher"
             className="font-medium text-slate-700 hover:text-blue-600"
           >
-            Find Teachers
+            Ustaad Login
           </a>
 
         </div>
