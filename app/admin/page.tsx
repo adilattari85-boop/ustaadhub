@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+
+type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
 
 type Requirement = {
   id: string;
@@ -22,120 +25,156 @@ type Requirement = {
   city_location: string | null;
   additional_requirement: string | null;
   created_at: string;
-  status?: string | null;
+  updated_at: string | null;
+  status: RequirementStatus;
 };
 
-const statuses = ["All", "New", "Contacted", "Matched"];
+const statuses: Array<"All" | RequirementStatus> = [
+  "All",
+  "pending",
+  "contacted",
+  "matched",
+  "closed",
+];
+
+const requirementColumns = [
+  "id",
+  "user_id",
+  "parent_student_name",
+  "mobile_number",
+  "student_age",
+  "student_gender",
+  "subjects",
+  "current_level",
+  "class_mode",
+  "teacher_gender",
+  "preferred_languages",
+  "classes_per_week",
+  "preferred_time",
+  "preferred_days",
+  "monthly_budget",
+  "city_location",
+  "additional_requirement",
+  "created_at",
+  "updated_at",
+  "status",
+].join(", ");
 
 export default function AdminPage() {
+  const router = useRouter();
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [selectedRequirement, setSelectedRequirement] =
     useState<Requirement | null>(null);
-
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  async function verifyAdmin() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      router.replace("/admin/login");
+      return false;
+    }
+
+    const { data: isAdmin, error: adminError } =
+      await supabase.rpc("is_admin");
+
+    if (adminError || !isAdmin) {
+      await supabase.auth.signOut();
+      router.replace("/admin/login");
+      return false;
+    }
+
+    return true;
+  }
 
   async function loadRequirements() {
     setLoading(true);
     setError("");
 
     try {
-      // 1. Check Supabase login session
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      if (!(await verifyAdmin())) return;
 
-      console.log("ADMIN SESSION:", session);
-
-      if (sessionError) {
-        console.error("SESSION ERROR:", sessionError);
-        setError("Could not verify admin login.");
-        setRequirements([]);
-        setLoading(false);
-        return;
-      }
-
-      if (!session) {
-        console.error("NO SUPABASE SESSION");
-        setError(
-          "Admin login session is missing. Please log in again and then open /admin."
-        );
-        setRequirements([]);
-        setLoading(false);
-        return;
-      }
-
-      console.log("LOGGED IN USER:", session.user.id);
-      console.log("LOGGED IN EMAIL:", session.user.email);
-
-      // 2. Load REAL requirements from Supabase
-      const {
-        data,
-        error: requirementsError,
-      } = await supabase
+      const { data, error: requirementsError } = await supabase
         .from("learning_requirements")
-        .select("*")
+        .select(requirementColumns)
         .order("created_at", { ascending: false });
 
-      console.log("SUPABASE REQUIREMENTS:", data);
-      console.log("SUPABASE REQUIREMENTS ERROR:", requirementsError);
-
       if (requirementsError) {
-        console.error(
-          "ADMIN REQUIREMENTS ERROR:",
-          requirementsError
-        );
-
         setError(requirementsError.message);
         setRequirements([]);
-        setLoading(false);
         return;
       }
 
       setRequirements((data || []) as Requirement[]);
-      setLoading(false);
     } catch (err) {
-      console.error("ADMIN LOAD ERROR:", err);
-
       setError(
         err instanceof Error
           ? err.message
           : "Something went wrong while loading requirements."
       );
-
       setRequirements([]);
+    } finally {
       setLoading(false);
     }
   }
 
+  async function updateStatus(
+    requirement: Requirement,
+    status: RequirementStatus
+  ) {
+    setStatusUpdating(true);
+    setError("");
+
+    const { data, error: updateError } = await supabase
+      .from("learning_requirements")
+      .update({ status })
+      .eq("id", requirement.id)
+      .select(requirementColumns)
+      .single();
+
+    if (updateError) {
+      setError(updateError.message);
+      setStatusUpdating(false);
+      return;
+    }
+
+    const updatedRequirement = data as Requirement;
+
+    setRequirements((current) =>
+      current.map((item) =>
+        item.id === updatedRequirement.id ? updatedRequirement : item
+      )
+    );
+    setSelectedRequirement(updatedRequirement);
+    setStatusUpdating(false);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace("/admin/login");
+  }
+
   useEffect(() => {
-    loadRequirements();
+    void loadRequirements();
   }, []);
 
-  const getStatus = (item: Requirement) => {
-    return item.status || "New";
-  };
+  const getStatus = (item: Requirement): RequirementStatus =>
+    item.status || "pending";
+
+  const countByStatus = (status: RequirementStatus) =>
+    requirements.filter((item) => getStatus(item) === status).length;
 
   const filteredRequirements =
     filter === "All"
       ? requirements
-      : requirements.filter(
-          (item) => getStatus(item) === filter
-        );
-
-  const newCount = requirements.filter(
-    (item) => getStatus(item) === "New"
-  ).length;
-
-  const contactedCount = requirements.filter(
-    (item) => getStatus(item) === "Contacted"
-  ).length;
-
-  const matchedCount = requirements.filter(
-    (item) => getStatus(item) === "Matched"
-  ).length;
+      : requirements.filter((item) => getStatus(item) === filter);
 
   function formatBudget(budget: number | null) {
     if (budget === null || budget === undefined) {
@@ -175,10 +214,10 @@ export default function AdminPage() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={loadRequirements}
+              onClick={handleLogout}
               className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
             >
-              Refresh
+              Logout
             </button>
 
             <a
@@ -243,7 +282,7 @@ export default function AdminPage() {
             </p>
 
             <p className="mt-2 text-3xl font-bold text-blue-600">
-              {newCount}
+              {countByStatus("pending")}
             </p>
           </div>
 
@@ -253,7 +292,7 @@ export default function AdminPage() {
             </p>
 
             <p className="mt-2 text-3xl font-bold text-orange-600">
-              {contactedCount}
+              {countByStatus("contacted")}
             </p>
           </div>
 
@@ -263,7 +302,7 @@ export default function AdminPage() {
             </p>
 
             <p className="mt-2 text-3xl font-bold text-green-600">
-              {matchedCount}
+              {countByStatus("matched")}
             </p>
           </div>
         </div>
@@ -395,11 +434,11 @@ export default function AdminPage() {
                         <td className="px-5 py-5">
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-bold ${
-                              status === "New"
+                              status === "pending"
                                 ? "bg-blue-100 text-blue-700"
-                                : status === "Contacted"
+                                : status === "contacted"
                                 ? "bg-orange-100 text-orange-700"
-                                : status === "Matched"
+                                : status === "matched"
                                 ? "bg-green-100 text-green-700"
                                 : "bg-slate-100 text-slate-700"
                             }`}
@@ -591,17 +630,40 @@ export default function AdminPage() {
                     "Not provided"}
                 </p>
               </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Last Updated
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.updated_at
+                    ? formatDate(selectedRequirement.updated_at)
+                    : "-"}
+                </p>
+              </div>
             </div>
 
-            <div className="mt-5 rounded-xl bg-slate-50 p-5">
-              <p className="text-xs text-slate-500">
-                Additional Requirement
-              </p>
+            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-5">
+              <label className="text-sm font-semibold text-slate-700">
+                Requirement Status
+              </label>
 
-              <p className="mt-2 leading-7 text-slate-700">
-                {selectedRequirement.additional_requirement ||
-                  "No additional requirement provided."}
-              </p>
+              <select
+                value={selectedRequirement.status}
+                disabled={statusUpdating}
+                onChange={(event) =>
+                  void updateStatus(
+                    selectedRequirement,
+                    event.target.value as RequirementStatus
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="pending">pending</option>
+                <option value="contacted">contacted</option>
+                <option value="matched">matched</option>
+                <option value="closed">closed</option>
+              </select>
             </div>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
