@@ -1,32 +1,42 @@
-const teachers = [
-  {
-    name: "Muhammad Ahsan",
-    subject: "Quran & Tajweed",
-    experience: "10+ years",
-    rating: "4.9",
-    students: "120+ students",
-    fee: "₹300/hr",
-    initials: "MA",
-  },
-  {
-    name: "Abdul Rahman",
-    subject: "Arabic & Islamic Studies",
-    experience: "8+ years",
-    rating: "4.8",
-    students: "95+ students",
-    fee: "₹350/hr",
-    initials: "AR",
-  },
-  {
-    name: "Fatima Zahra",
-    subject: "Quran, Hifz & Tajweed",
-    experience: "7+ years",
-    rating: "5.0",
-    students: "80+ students",
-    fee: "₹300/hr",
-    initials: "FZ",
-  },
-];
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+
+type TeacherProfile = {
+  id: string;
+  full_name: string | null;
+  subjects: string[] | null;
+  experience: string | null;
+  languages: string[] | null;
+  teaching_mode: string | null;
+  fee_weekly: number | null;
+  fee_monthly: number | null;
+  profile_photo_url: string | null;
+  is_verified: boolean;
+};
+
+const teacherColumns =
+  "id, full_name, subjects, experience, languages, teaching_mode, fee_weekly, fee_monthly, profile_photo_url, is_verified";
+
+function getInitials(name: string | null) {
+  const initials = (name || "Teacher")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+
+  return initials || "T";
+}
+
+function formatFee(value: number | null, period: "week" | "month") {
+  if (value === null || value === undefined) return null;
+
+  return `₹${value.toLocaleString("en-IN")}/${period}`;
+}
 
 const categories = [
   ["📖", "Quran & Tajweed"],
@@ -40,6 +50,34 @@ const categories = [
 ];
 
 export default function Home() {
+  const [featuredTeachers, setFeaturedTeachers] = useState<TeacherProfile[]>([]);
+  const [teachersLoading, setTeachersLoading] = useState(true);
+  const [teachersError, setTeachersError] = useState("");
+
+  useEffect(() => {
+    async function loadFeaturedTeachers() {
+      setTeachersLoading(true);
+      setTeachersError("");
+
+      const { data, error } = await supabase
+        .from("teacher_profiles")
+        .select(teacherColumns)
+        .eq("is_verified", true)
+        .limit(3);
+
+      if (error) {
+        setTeachersError("Unable to load featured teachers.");
+        setFeaturedTeachers([]);
+      } else {
+        setFeaturedTeachers((data || []) as unknown as TeacherProfile[]);
+      }
+
+      setTeachersLoading(false);
+    }
+
+    void loadFeaturedTeachers();
+  }, []);
+
   return (
     <main className="min-h-screen bg-white text-gray-900">
 
@@ -216,7 +254,6 @@ export default function Home() {
       {/* FEATURED TEACHERS */}
       <section id="teachers" className="bg-gray-50 py-20">
         <div className="mx-auto max-w-7xl px-5">
-
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <p className="font-semibold text-blue-700">
@@ -228,84 +265,118 @@ export default function Home() {
               </h2>
 
               <p className="mt-3 text-gray-600">
-                Discover teachers based on subject, experience and reviews.
+                Discover verified teachers based on their expertise and fees.
               </p>
             </div>
 
-            <button className="w-fit rounded-lg font-semibold text-blue-700 hover:text-blue-900">
+            <Link
+              href="/teachers"
+              className="w-fit rounded-lg font-semibold text-blue-700 hover:text-blue-900"
+            >
               View all teachers →
-            </button>
+            </Link>
           </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {teachersLoading ? (
+            <div className="mt-10 rounded-2xl bg-white p-12 text-center shadow-sm">
+              Loading verified teachers...
+            </div>
+          ) : teachersError ? (
+            <div className="mt-10 rounded-2xl border border-red-200 bg-red-50 p-12 text-center text-red-700">
+              {teachersError}
+            </div>
+          ) : featuredTeachers.length === 0 ? (
+            <div className="mt-10 rounded-2xl bg-white p-12 text-center shadow-sm">
+              No verified teachers available yet.
+            </div>
+          ) : (
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {featuredTeachers.map((teacher) => {
+                const weeklyFee = formatFee(teacher.fee_weekly, "week");
+                const monthlyFee = formatFee(teacher.fee_monthly, "month");
 
-            {teachers.map((teacher) => (
-              <div
-                key={teacher.name}
-                className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-              >
+                return (
+                  <div
+                    key={teacher.id}
+                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    <div className="flex items-center gap-4 p-6">
+                      {teacher.profile_photo_url ? (
+                        <img
+                          src={teacher.profile_photo_url}
+                          alt={teacher.full_name || "Teacher"}
+                          className="h-20 w-20 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-700">
+                          {getInitials(teacher.full_name)}
+                        </div>
+                      )}
 
-                <div className="flex items-center gap-4 p-6">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-lg font-bold">
+                          {teacher.full_name || "Ustaad"}
+                        </h3>
 
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-700">
-                    {teacher.initials}
-                  </div>
+                        <p className="mt-1 text-sm text-blue-700">
+                          {(teacher.subjects || []).slice(0, 2).join(" & ") ||
+                            "Subjects not specified"}
+                        </p>
 
-                  <div>
-                    <h3 className="text-lg font-bold">
-                      {teacher.name}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-blue-700">
-                      {teacher.subject}
-                    </p>
-
-                    <div className="mt-2 text-sm">
-                      ⭐ {teacher.rating}
-                    </div>
-                  </div>
-
-                </div>
-
-                <div className="border-t px-6 py-5">
-
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">
-                      Experience
-                    </span>
-
-                    <span className="font-semibold">
-                      {teacher.experience}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex justify-between text-sm">
-                    <span className="text-gray-500">
-                      Students
-                    </span>
-
-                    <span className="font-semibold">
-                      {teacher.students}
-                    </span>
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between">
-                    <div>
-                      <span className="text-xl font-bold">
-                        {teacher.fee}
-                      </span>
+                        <span className="mt-2 inline-block rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
+                          ✓ Verified
+                        </span>
+                      </div>
                     </div>
 
-                    <button className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800">
-                      View Profile
-                    </button>
+                    <div className="border-t px-6 py-5">
+                      <div className="flex justify-between gap-4 text-sm">
+                        <span className="text-gray-500">Experience</span>
+                        <span className="text-right font-semibold">
+                          {teacher.experience || "Not specified"}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex justify-between gap-4 text-sm">
+                        <span className="text-gray-500">Teaching mode</span>
+                        <span className="text-right font-semibold">
+                          {teacher.teaching_mode || "Not specified"}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex justify-between gap-4 text-sm">
+                        <span className="text-gray-500">Languages</span>
+                        <span className="text-right font-semibold">
+                          {(teacher.languages || []).join(", ") ||
+                            "Not specified"}
+                        </span>
+                      </div>
+
+                      {(weeklyFee || monthlyFee) && (
+                        <div className="mt-3 flex justify-between gap-4 text-sm">
+                          <span className="text-gray-500">Fees</span>
+                          <span className="text-right font-semibold">
+                            {[weeklyFee, monthlyFee]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="mt-5 flex items-center justify-end">
+                        <Link
+                          href={`/teachers/${teacher.id}`}
+                          className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800"
+                        >
+                          View Profile
+                        </Link>
+                      </div>
+                    </div>
                   </div>
-
-                </div>
-              </div>
-            ))}
-
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
