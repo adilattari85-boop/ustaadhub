@@ -45,3 +45,16 @@ option {
   color: #111827;
   background: #ffffff;
 }
+
+/* WhatsApp Button Safe Area Support */
+.whatsapp-button {
+  /* Mobile: respect safe area with minimum 1.5rem (bottom-6) */
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .whatsapp-button {
+    /* Desktop: use 2rem (md:bottom-8) */
+    bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+}
