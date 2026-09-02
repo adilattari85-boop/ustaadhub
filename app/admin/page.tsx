@@ -37,28 +37,8 @@ const statuses: Array<"All" | RequirementStatus> = [
   "closed",
 ];
 
-const requirementColumns = [
-  "id",
-  "user_id",
-  "parent_student_name",
-  "mobile_number",
-  "student_age",
-  "student_gender",
-  "subjects",
-  "current_level",
-  "class_mode",
-  "teacher_gender",
-  "preferred_languages",
-  "classes_per_week",
-  "preferred_time",
-  "preferred_days",
-  "monthly_budget",
-  "city_location",
-  "additional_requirement",
-  "created_at",
-  "updated_at",
-  "status",
-].join(", ");
+const requirementColumns =
+  "id, user_id, parent_student_name, mobile_number, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, monthly_budget, city_location, additional_requirement, created_at, updated_at, status";
 
 export default function AdminPage() {
   const router = useRouter();
