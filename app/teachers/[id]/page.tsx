@@ -1,73 +1,171 @@
-const teacher = {
-  name: "Muhammad Adil",
-  initials: "MA",
-  subjects: ["Quran", "Tajweed", "Hifz-ul-Quran", "Islamic Studies"],
-  experience: "10+ years",
-  rating: "5.0",
-  reviews: 48,
-  students: "120+",
-  languages: ["Hindi", "Urdu", "English"],
-  mode: "Online • One-to-one",
-  fee: "₹300 / hour",
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+type TeacherProfile = {
+  id: string;
+  full_name: string | null;
+  bio: string | null;
+  subjects: string[] | null;
+  experience: string | null;
+  languages: string[] | null;
+  teaching_mode: string | null;
+  fee_weekly: number | null;
+  fee_monthly: number | null;
+  profile_photo_url: string | null;
+  is_verified: boolean;
 };
 
-export default function TeacherProfile() {
+const teacherColumns =
+  "id, full_name, bio, subjects, experience, languages, teaching_mode, fee_weekly, fee_monthly, profile_photo_url, is_verified";
+
+function getInitials(name: string | null) {
+  const initials = (name || "Teacher")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+
+  return initials || "T";
+}
+
+function formatFee(value: number | null, period: "week" | "month") {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return `₹${value.toLocaleString("en-IN")}/${period}`;
+}
+
+export default function TeacherProfilePage() {
+  const params = useParams<{ id: string }>();
+  const [teacher, setTeacher] = useState<TeacherProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!params.id) return;
+
+    let active = true;
+
+    async function loadTeacher() {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("teacher_profiles")
+        .select(teacherColumns)
+        .eq("id", params.id)
+        .eq("is_verified", true)
+        .single();
+
+      if (!active) return;
+
+      if (error || !data) {
+        setTeacher(null);
+      } else {
+        setTeacher(data as unknown as TeacherProfile);
+      }
+
+      setLoading(false);
+    }
+
+    void loadTeacher();
+
+    return () => {
+      active = false;
+    };
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
+        <p className="text-lg font-semibold">Loading teacher profile...</p>
+      </main>
+    );
+  }
+
+  if (!teacher) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-slate-900">
+        <section className="w-full max-w-lg rounded-3xl border bg-white p-10 text-center shadow-sm">
+          <h1 className="text-3xl font-bold">Teacher not found</h1>
+          <p className="mt-3 text-slate-600">
+            This teacher profile does not exist or is not currently verified.
+          </p>
+          <Link
+            href="/teachers"
+            className="mt-7 inline-block rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+          >
+            Browse Teachers
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  const subjects = teacher.subjects || [];
+  const languages = teacher.languages || [];
+  const weeklyFee = formatFee(teacher.fee_weekly, "week");
+  const monthlyFee = formatFee(teacher.fee_monthly, "month");
+
   return (
     <main className="min-h-screen bg-slate-50">
-
-      {/* Header */}
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <a
-            href="/"
-            className="text-3xl font-bold text-blue-600"
-          >
+          <Link href="/" className="text-3xl font-bold text-blue-600">
             UstaadHub
-          </a>
+          </Link>
 
           <div className="flex items-center gap-4">
-            <a
+            <Link
               href="/teachers"
               className="hidden font-medium text-slate-700 sm:block"
             >
               Find Teachers
-            </a>
+            </Link>
 
-            <button className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700">
+            <Link
+              href="/login"
+              className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            >
               Login
-            </button>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Profile */}
       <section className="mx-auto max-w-6xl px-6 py-12">
-
-        {/* Breadcrumb */}
         <div className="mb-6 text-sm text-slate-500">
-          <a href="/teachers" className="hover:text-blue-600">
+          <Link href="/teachers" className="hover:text-blue-600">
             Find Teachers
-          </a>
+          </Link>
           <span className="mx-2">/</span>
           Teacher Profile
         </div>
 
-        {/* Main Profile Card */}
         <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
-
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-10 md:px-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-center">
+              {teacher.profile_photo_url ? (
+                <img
+                  src={teacher.profile_photo_url}
+                  alt={teacher.full_name || "Teacher"}
+                  className="h-32 w-32 shrink-0 rounded-full border-4 border-white object-cover shadow-lg"
+                />
+              ) : (
+                <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-4 border-white bg-blue-100 text-4xl font-bold text-blue-700 shadow-lg">
+                  {getInitials(teacher.full_name)}
+                </div>
+              )}
 
-              {/* Photo */}
-              <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-4 border-white bg-blue-100 text-4xl font-bold text-blue-700 shadow-lg">
-                {teacher.initials}
-              </div>
-
-              {/* Basic Info */}
               <div className="text-white">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl font-bold md:text-4xl">
-                    {teacher.name}
+                    {teacher.full_name || "Teacher"}
                   </h1>
 
                   <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-medium">
@@ -76,210 +174,126 @@ export default function TeacherProfile() {
                 </div>
 
                 <p className="mt-3 text-lg text-blue-100">
-                  Quran & Islamic Education Teacher
+                  {subjects.join(" & ") || "Teacher profile"}
                 </p>
 
-                <div className="mt-4 flex flex-wrap gap-5 text-sm">
-                  <span>⭐ {teacher.rating}</span>
-                  <span>{teacher.reviews} reviews</span>
-                  <span>{teacher.students} students</span>
-                  <span>{teacher.experience}</span>
-                </div>
+                {teacher.experience && (
+                  <p className="mt-4 text-sm text-blue-100">
+                    {teacher.experience} of experience
+                  </p>
+                )}
               </div>
-
             </div>
           </div>
 
-          {/* Content */}
           <div className="grid gap-10 p-6 md:grid-cols-3 md:p-10">
-
-            {/* Left */}
             <div className="md:col-span-2">
+              <h2 className="text-2xl font-bold">About the Teacher</h2>
 
-              <h2 className="text-2xl font-bold">
-                About the Teacher
-              </h2>
-
-              <p className="mt-4 leading-8 text-slate-600">
-                Assalamu Alaikum! I am an experienced teacher specialising
-                in Quran reading, Tajweed, Hifz-ul-Quran and Islamic
-                Studies. My teaching approach is friendly, patient and
-                interactive. I focus on understanding the student's level
-                and creating a comfortable learning environment.
+              <p className="mt-4 whitespace-pre-line leading-8 text-slate-600">
+                {teacher.bio || "No biography has been provided."}
               </p>
 
-              <p className="mt-4 leading-8 text-slate-600">
-                Classes are personalised according to the student's age,
-                current knowledge and learning goals. Beginners are welcome.
-              </p>
-
-              {/* Subjects */}
-              <h2 className="mt-10 text-2xl font-bold">
-                Subjects I Teach
-              </h2>
+              <h2 className="mt-10 text-2xl font-bold">Subjects I Teach</h2>
 
               <div className="mt-5 flex flex-wrap gap-3">
-                {teacher.subjects.map((subject) => (
-                  <span
-                    key={subject}
-                    className="rounded-full bg-blue-50 px-4 py-2 font-medium text-blue-700"
-                  >
-                    {subject}
+                {subjects.length ? (
+                  subjects.map((subject) => (
+                    <span
+                      key={subject}
+                      className="rounded-full bg-blue-50 px-4 py-2 font-medium text-blue-700"
+                    >
+                      {subject}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-slate-500">
+                    No subjects specified.
                   </span>
-                ))}
+                )}
               </div>
 
-              {/* Teaching Style */}
-              <h2 className="mt-10 text-2xl font-bold">
-                Teaching Style
-              </h2>
-
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                {[
-                  ["🤝", "Friendly & Patient"],
-                  ["🎯", "Personalised Learning"],
-                  ["💬", "Interactive Classes"],
-                  ["👨‍🏫", "One-to-one Teaching"],
-                ].map(([icon, title]) => (
-                  <div
-                    key={title}
-                    className="rounded-xl border bg-slate-50 p-5"
-                  >
-                    <div className="text-2xl">{icon}</div>
-                    <div className="mt-2 font-semibold">
-                      {title}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Languages */}
-              <h2 className="mt-10 text-2xl font-bold">
-                Languages
-              </h2>
+              <h2 className="mt-10 text-2xl font-bold">Languages</h2>
 
               <div className="mt-5 flex flex-wrap gap-3">
-                {teacher.languages.map((language) => (
-                  <span
-                    key={language}
-                    className="rounded-lg border px-4 py-2 text-sm font-medium"
-                  >
-                    {language}
+                {languages.length ? (
+                  languages.map((language) => (
+                    <span
+                      key={language}
+                      className="rounded-lg border px-4 py-2 text-sm font-medium"
+                    >
+                      {language}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-slate-500">
+                    No languages specified.
                   </span>
-                ))}
+                )}
               </div>
-
-              {/* Reviews */}
-              <h2 className="mt-10 text-2xl font-bold">
-                Student Reviews
-              </h2>
-
-              <div className="mt-5 space-y-4">
-
-                <div className="rounded-2xl border p-5">
-                  <div className="font-semibold">
-                    ⭐⭐⭐⭐⭐
-                  </div>
-
-                  <p className="mt-3 text-slate-600">
-                    Very patient teacher. My child enjoys the Quran classes
-                    and has improved significantly.
-                  </p>
-
-                  <p className="mt-3 text-sm font-medium">
-                    — Parent of a student
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border p-5">
-                  <div className="font-semibold">
-                    ⭐⭐⭐⭐⭐
-                  </div>
-
-                  <p className="mt-3 text-slate-600">
-                    Excellent teaching style and very easy to communicate with.
-                  </p>
-
-                  <p className="mt-3 text-sm font-medium">
-                    — Student
-                  </p>
-                </div>
-
-              </div>
-
             </div>
 
-            {/* Right Booking Card */}
             <aside>
               <div className="sticky top-24 rounded-2xl border bg-white p-6 shadow-lg">
+                <p className="text-sm text-slate-500">Fees</p>
 
-                <p className="text-sm text-slate-500">
-                  Starting from
-                </p>
-
-                <div className="mt-1 text-3xl font-bold">
-                  {teacher.fee}
-                </div>
-
-                <div className="mt-5 rounded-xl bg-green-50 p-4 text-sm font-medium text-green-700">
-                  🟢 Available for new students
+                <div className="mt-2 space-y-2 text-2xl font-bold">
+                  {weeklyFee && <p>{weeklyFee}</p>}
+                  {monthlyFee && <p>{monthlyFee}</p>}
+                  {!weeklyFee && !monthlyFee && (
+                    <p className="text-lg">Not specified</p>
+                  )}
                 </div>
 
                 <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">
-                      Teaching mode
-                    </span>
-                    <span className="font-semibold">
-                      Online
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-500">Teaching mode</span>
+                    <span className="text-right font-semibold">
+                      {teacher.teaching_mode || "Not specified"}
                     </span>
                   </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">
-                      Classes
-                    </span>
-                    <span className="font-semibold">
-                      One-to-one
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-500">Experience</span>
+                    <span className="text-right font-semibold">
+                      {teacher.experience || "Not specified"}
                     </span>
                   </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">
-                      Languages
-                    </span>
-                    <span className="font-semibold">
-                      3
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-500">Languages</span>
+                    <span className="text-right font-semibold">
+                      {languages.length || "Not specified"}
                     </span>
                   </div>
                 </div>
 
-                <button className="mt-7 w-full rounded-xl bg-blue-600 py-4 font-bold text-white hover:bg-blue-700">
-                  Book a Trial Class
+                <button
+                  type="button"
+                  disabled
+                  className="mt-7 w-full cursor-not-allowed rounded-xl bg-blue-600 py-4 font-bold text-white opacity-60"
+                >
+                  Booking unavailable
                 </button>
 
-                <button className="mt-3 w-full rounded-xl border border-blue-600 py-4 font-bold text-blue-600 hover:bg-blue-50">
-                  Message Teacher
+                <button
+                  type="button"
+                  disabled
+                  className="mt-3 w-full cursor-not-allowed rounded-xl border border-blue-600 py-4 font-bold text-blue-600 opacity-60"
+                >
+                  Messaging unavailable
                 </button>
-
-                <p className="mt-5 text-center text-xs leading-5 text-slate-500">
-                  You can contact the teacher before booking.
-                </p>
-
               </div>
             </aside>
-
           </div>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-6 py-8 text-center text-sm text-slate-500">
           © 2026 UstaadHub. All rights reserved.
         </div>
       </footer>
-
     </main>
   );
 }
