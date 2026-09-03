@@ -470,23 +470,39 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TEACHER CTA */}
-      <section className="px-5 py-10">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-blue-700 px-6 py-16 text-center text-white md:px-16">
-          <h2 className="text-3xl font-bold md:text-4xl">
-            Share your knowledge with the world.
-          </h2>
+      <section className="mx-auto mt-16 max-w-7xl px-6 pb-16">
+  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-6 py-16 text-center shadow-xl md:px-12 md:py-20">
+    {/* Decorative background */}
+    <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+    <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl" />
 
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-blue-100">
-            Create your UstaadHub teacher profile and connect with students
-            looking for your expertise.
-          </p>
+    <div className="relative mx-auto max-w-3xl">
+      <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-blue-100">
+        Start Learning Today
+      </p>
 
-          <button className="mt-8 rounded-xl bg-white px-7 py-4 font-bold text-blue-700 hover:bg-blue-50">
-            Join as a Teacher
-          </button>
-        </div>
-      </section>
+      <h2 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+        Find the Right Teacher for You
+      </h2>
+
+      <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-blue-50 md:text-xl">
+        Book a demo class and experience the right learning approach
+        before you decide.
+      </p>
+
+      <a
+        href="/requirement"
+        className="mt-9 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-green-700 hover:shadow-xl"
+      >
+        🎓 Book a Demo Class
+      </a>
+
+      <p className="mt-4 text-sm text-blue-100">
+        Tell us what you want to learn — we’ll help you find the right teacher.
+      </p>
+    </div>
+  </div>
+</section>
 
       {/* FOOTER */}
       <footer className="mt-10 border-t">
