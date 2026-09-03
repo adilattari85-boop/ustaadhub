@@ -49,38 +49,91 @@ const categories = [
   ["📝", "Urdu"],
 ];
 
+const MAX_RETRIES = 3;
+const REQUEST_TIMEOUT = 10000;
+
 export default function Home() {
-  const [featuredTeachers, setFeaturedTeachers] = useState<TeacherProfile[]>([]);
+  const [featuredTeachers, setFeaturedTeachers] = useState<TeacherProfile[]>(
+    [],
+  );
   const [teachersLoading, setTeachersLoading] = useState(true);
   const [teachersError, setTeachersError] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadFeaturedTeachers() {
       setTeachersLoading(true);
       setTeachersError("");
 
-      const { data, error } = await supabase
-        .from("teacher_profiles")
-        .select(teacherColumns)
-        .eq("is_verified", true)
-        .limit(3);
+      let lastError: unknown = null;
 
-      if (error) {
-        setTeachersError("Unable to load featured teachers.");
-        setFeaturedTeachers([]);
-      } else {
-        setFeaturedTeachers((data || []) as unknown as TeacherProfile[]);
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        if (!isMounted) {
+          return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(
+          () => controller.abort(),
+          REQUEST_TIMEOUT,
+        );
+
+        try {
+          const { data, error } = await supabase
+            .from("teacher_profiles")
+            .select(teacherColumns)
+            .eq("is_verified", true)
+            .limit(3)
+            .abortSignal(controller.signal);
+
+          window.clearTimeout(timeoutId);
+
+          if (error) {
+            throw error;
+          }
+
+          if (!isMounted) {
+            return;
+          }
+
+          setFeaturedTeachers((data || []) as unknown as TeacherProfile[]);
+          setTeachersError("");
+          setTeachersLoading(false);
+          return;
+        } catch (error) {
+          window.clearTimeout(timeoutId);
+          lastError = error;
+
+          if (attempt < MAX_RETRIES) {
+            await new Promise((resolve) =>
+              window.setTimeout(resolve, 500 * attempt),
+            );
+          }
+        }
       }
 
+      if (!isMounted) {
+        return;
+      }
+
+      console.error("Unable to load featured teachers:", lastError);
+      setFeaturedTeachers([]);
+      setTeachersError(
+        "Unable to load featured teachers. Please refresh the page and try again.",
+      );
       setTeachersLoading(false);
     }
 
     void loadFeaturedTeachers();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
-
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
@@ -101,11 +154,17 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
-            <a href="/login" className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100">
+            <a
+              href="/login"
+              className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100"
+            >
               Login
             </a>
-<a
-             href="/register" className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800">
+
+            <a
+              href="/register"
+              className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800"
+            >
               Join as Teacher
             </a>
           </div>
@@ -115,7 +174,6 @@ export default function Home() {
       {/* HERO */}
       <section className="overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:grid-cols-2 md:items-center md:py-28">
-
           <div>
             <div className="mb-6 inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
               ✨ Learn from trusted teachers
@@ -128,9 +186,9 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-gray-600">
-              Learn Quran, Islamic Studies, Arabic, languages and more
-              from experienced teachers through personalised one-to-one
-              online classes.
+              Learn Quran, Islamic Studies, Arabic, languages and more from
+              experienced teachers through personalised one-to-one online
+              classes.
             </p>
 
             {/* SEARCH */}
@@ -139,22 +197,25 @@ export default function Home() {
                 type="text"
                 placeholder="What do you want to learn?"
                 className="min-w-0 flex-1 rounded-xl border border-gray-200 px-5 py-4 outline-none focus:border-blue-500"
-              /><div className="mt-5">
-  <a
-    href="/requirement"
-    className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-blue-800 sm:w-auto"
-  >
-    📝 Post Your Learning Requirement
-  </a>
-
-  <p className="mt-3 text-sm text-gray-500">
-    Tell us what you want to learn — we&apos;ll help you find the right teacher.
-  </p>
-</div>
+              />
 
               <button className="rounded-xl bg-blue-700 px-7 py-4 font-bold text-white hover:bg-blue-800">
                 Find a Teacher
               </button>
+            </div>
+
+            <div className="mt-5">
+              <a
+                href="/requirement"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-blue-800 sm:w-auto"
+              >
+                📝 Post Your Learning Requirement
+              </a>
+
+              <p className="mt-3 text-sm text-gray-500">
+                Tell us what you want to learn — we&apos;ll help you find the
+                right teacher.
+              </p>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
@@ -168,7 +229,6 @@ export default function Home() {
           <div className="mx-auto w-full max-w-md">
             <div className="rounded-3xl bg-white p-5 shadow-2xl">
               <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-center text-white">
-
                 <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white text-4xl font-bold text-blue-700 shadow-lg">
                   U
                 </div>
@@ -185,47 +245,37 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-3 p-3">
                 <div className="rounded-xl bg-gray-50 p-4 text-center">
                   <div className="text-xl font-bold text-blue-700">1:1</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Classes
-                  </div>
+                  <div className="mt-1 text-xs text-gray-500">Classes</div>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4 text-center">
                   <div className="text-xl font-bold text-blue-700">100+</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Teachers
-                  </div>
+                  <div className="mt-1 text-xs text-gray-500">Teachers</div>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4 text-center">
                   <div className="text-xl font-bold text-blue-700">24/7</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Learning
-                  </div>
+                  <div className="mt-1 text-xs text-gray-500">Learning</div>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
       {/* CATEGORIES */}
       <section id="subjects" className="py-20">
         <div className="mx-auto max-w-7xl px-5">
-
           <div className="text-center">
-            <p className="font-semibold text-blue-700">
-              EXPLORE SUBJECTS
-            </p>
+            <p className="font-semibold text-blue-700">EXPLORE SUBJECTS</p>
 
             <h2 className="mt-2 text-3xl font-bold md:text-4xl">
               What do you want to learn?
             </h2>
 
             <p className="mx-auto mt-4 max-w-2xl text-gray-600">
-              Choose a subject and discover teachers who can help you
-              learn at your own pace.
+              Choose a subject and discover teachers who can help you learn at
+              your own pace.
             </p>
           </div>
 
@@ -237,9 +287,7 @@ export default function Home() {
               >
                 <div className="text-4xl">{icon}</div>
 
-                <h3 className="mt-4 font-bold">
-                  {title}
-                </h3>
+                <h3 className="mt-4 font-bold">{title}</h3>
 
                 <p className="mt-2 text-sm text-gray-500">
                   Find a teacher →
@@ -247,7 +295,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
@@ -383,11 +430,8 @@ export default function Home() {
       {/* HOW IT WORKS */}
       <section id="how" className="py-20">
         <div className="mx-auto max-w-6xl px-5">
-
           <div className="text-center">
-            <p className="font-semibold text-blue-700">
-              SIMPLE PROCESS
-            </p>
+            <p className="font-semibold text-blue-700">SIMPLE PROCESS</p>
 
             <h2 className="mt-2 text-3xl font-bold md:text-4xl">
               How UstaadHub works
@@ -395,7 +439,6 @@ export default function Home() {
           </div>
 
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-
             {[
               [
                 "01",
@@ -414,22 +457,15 @@ export default function Home() {
               ],
             ].map(([number, title, description]) => (
               <div key={number} className="text-center">
-
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-700 text-xl font-bold text-white">
                   {number}
                 </div>
 
-                <h3 className="mt-5 text-xl font-bold">
-                  {title}
-                </h3>
+                <h3 className="mt-5 text-xl font-bold">{title}</h3>
 
-                <p className="mt-3 leading-7 text-gray-600">
-                  {description}
-                </p>
-
+                <p className="mt-3 leading-7 text-gray-600">{description}</p>
               </div>
             ))}
-
           </div>
         </div>
       </section>
@@ -437,52 +473,38 @@ export default function Home() {
       {/* TEACHER CTA */}
       <section className="px-5 py-10">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-blue-700 px-6 py-16 text-center text-white md:px-16">
-
           <h2 className="text-3xl font-bold md:text-4xl">
             Share your knowledge with the world.
           </h2>
 
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-blue-100">
-            Create your UstaadHub teacher profile and connect with
-            students looking for your expertise.
+            Create your UstaadHub teacher profile and connect with students
+            looking for your expertise.
           </p>
 
           <button className="mt-8 rounded-xl bg-white px-7 py-4 font-bold text-blue-700 hover:bg-blue-50">
             Join as a Teacher
           </button>
-
         </div>
       </section>
 
       {/* FOOTER */}
       <footer className="mt-10 border-t">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
-
-          <div>
-            © 2026 UstaadHub. All rights reserved.
-          </div>
+          <div>© 2026 UstaadHub. All rights reserved.</div>
 
           <div className="flex gap-6">
-            <span className="cursor-pointer hover:text-blue-700">
-              About
-            </span>
-
+            <span className="cursor-pointer hover:text-blue-700">About</span>
             <span className="cursor-pointer hover:text-blue-700">
               Contact
             </span>
-
             <span className="cursor-pointer hover:text-blue-700">
               Privacy
             </span>
-
-            <span className="cursor-pointer hover:text-blue-700">
-              Terms
-            </span>
+            <span className="cursor-pointer hover:text-blue-700">Terms</span>
           </div>
-
         </div>
       </footer>
-
     </main>
   );
 }
