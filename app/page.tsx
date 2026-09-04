@@ -58,6 +58,34 @@ export default function Home() {
   );
   const [teachersLoading, setTeachersLoading] = useState(true);
   const [teachersError, setTeachersError] = useState("");
+  const [courseSearch, setCourseSearch] = useState("");
+const [showCourseList, setShowCourseList] = useState(false);
+
+const courses = [
+  "Madni Qaida / Nazra Course",
+  "Qaida Teacher Course",
+  "Teacher Nazra Course",
+  "Hifz-e-Quran",
+  "Tajweed-o-Quran",
+  "Husn-e-Quran Course",
+  "Tafseer-e-Noor",
+  "Hifz 40 Hadith",
+  "Hadith Course",
+  "Tafseer-e-Quran",
+  "Farz Uloom",
+  "Arabic",
+  "English",
+  "Hindi",
+  "Urdu",
+];
+
+const filteredCourses = courses.filter((course) =>
+  course.toLowerCase().includes(courseSearch.toLowerCase())
+);
+
+function selectCourse(course: string) {
+  window.location.href = `/requirement?course=${encodeURIComponent(course)}`;
+}
 
   useEffect(() => {
     let isMounted = true;
@@ -191,23 +219,93 @@ export default function Home() {
               classes.
             </p>
 
-            {/* SEARCH */}
-            <div className="mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl bg-white p-3 shadow-xl sm:flex-row">
-              <input
-                type="text"
-                placeholder="What do you want to learn?"
-                className="min-w-0 flex-1 rounded-xl border border-gray-200 px-5 py-4 outline-none focus:border-blue-500"
-              />
+            {/* COURSE SEARCH */}
+            <div className="relative mt-8 max-w-4xl">
+              <div className="rounded-2xl bg-white p-3 shadow-xl ring-1 ring-gray-200 sm:p-4">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="relative min-w-0 flex-1">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400">
+                      🔍
+                    </span>
 
-              <button className="rounded-xl bg-blue-700 px-7 py-4 font-bold text-white hover:bg-blue-800">
-                Find a Teacher
-              </button>
+                    <input
+                      type="text"
+                      value={courseSearch}
+                      onChange={(e) => {
+                        setCourseSearch(e.target.value);
+                        setShowCourseList(true);
+                      }}
+                      onFocus={() => setShowCourseList(true)}
+                      placeholder="Search a course or subject..."
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-4 pl-12 pr-4 text-base outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:text-lg"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (filteredCourses.length > 0) {
+                        selectCourse(filteredCourses[0]);
+                      }
+                    }}
+                    disabled={filteredCourses.length === 0}
+                    className="w-full rounded-xl bg-blue-700 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:text-lg"
+                  >
+                    Search Courses
+                  </button>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 px-1 text-sm">
+                  <span className="font-semibold text-gray-500">Popular:</span>
+
+                  {["Quran & Tajweed", "Hifz-ul-Quran", "Arabic", "English"].map(
+                    (course) => (
+                      <button
+                        key={course}
+                        type="button"
+                        onClick={() => selectCourse(course)}
+                        className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        {course}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+
+              {showCourseList && (
+                <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                  <div className="border-b bg-gray-50 px-5 py-3 text-sm font-semibold text-gray-500">
+                    Choose a course
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto p-2">
+                    {filteredCourses.length > 0 ? (
+                      filteredCourses.map((course) => (
+                        <button
+                          key={course}
+                          type="button"
+                          onClick={() => selectCourse(course)}
+                          className="flex w-full items-center rounded-xl px-4 py-3 text-left font-medium text-gray-800 transition hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          <span className="mr-3 text-lg">📚</span>
+                          {course}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-6 text-center text-sm text-gray-500">
+                        No matching course found.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-5">
               <a
                 href="/requirement"
-                className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-blue-800 sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-blue-800 sm:text-lg"
               >
                 📝 Post Your Learning Requirement
               </a>
