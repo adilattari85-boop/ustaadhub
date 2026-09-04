@@ -63,6 +63,7 @@ const [showCourseList, setShowCourseList] = useState(false);
 
 const courses = [
   "Madni Qaida / Nazra Course",
+   "Darse Nizami/aalim course",
   "Qaida Teacher Course",
   "Teacher Nazra Course",
   "Hifz-e-Quran",
@@ -198,11 +199,11 @@ function selectCourse(course: string) {
           </div>
         </div>
       </nav>
-
-      {/* HERO */}
-      <section className="overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+ <section className="overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:grid-cols-2 md:items-center md:py-28">
-          <div>
+      {/* HERO */}
+  <div>
+
             <div className="mb-6 inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
               ✨ Learn from trusted teachers
             </div>
@@ -220,32 +221,83 @@ function selectCourse(course: string) {
             </p>
 
             {/* COURSE SEARCH */}
-            <div className="relative mt-8 max-w-4xl">
+            <div className="mt-8 max-w-4xl">
               <div className="rounded-2xl bg-white p-3 shadow-xl ring-1 ring-gray-200 sm:p-4">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="relative min-w-0 flex-1">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400">
-                      🔍
-                    </span>
 
-                    <input
-                      type="text"
-                      value={courseSearch}
-                      onChange={(e) => {
-                        setCourseSearch(e.target.value);
-                        setShowCourseList(true);
-                      }}
-                      onFocus={() => setShowCourseList(true)}
-                      placeholder="Search a course or subject..."
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-4 pl-12 pr-4 text-base outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:text-lg"
-                    />
+                <div className="flex flex-col gap-3 sm:flex-row">
+
+                  {/* SEARCH INPUT + COURSE DROPDOWN */}
+                  <div className="relative min-w-0 flex-1">
+
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400">
+                        🔍
+                      </span>
+
+                      <input
+                        type="text"
+                        value={courseSearch}
+                        onChange={(e) => {
+                          setCourseSearch(e.target.value);
+                          setShowCourseList(true);
+                        }}
+                        onFocus={() => setShowCourseList(true)}
+                        placeholder="Search a course or subject..."
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-4 pl-12 pr-4 text-base outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:text-lg"
+                      />
+                    </div>
+
+                    {/* COURSE SUGGESTIONS */}
+                    {showCourseList && (
+                      <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+
+                        <div className="border-b bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-600">
+                          {courseSearch.trim()
+                            ? "Matching courses"
+                            : "Popular courses"}
+                        </div>
+
+                        <div className="max-h-64 overflow-y-auto p-2">
+
+                          {filteredCourses.length > 0 ? (
+                            filteredCourses.map((course) => (
+                              <button
+                                key={course}
+                                type="button"
+                                onClick={() => {
+                                  selectCourse(course);
+                                  setShowCourseList(false);
+                                }}
+                                className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-800 transition hover:bg-blue-50 hover:text-blue-700 sm:text-base"
+                              >
+                                <span className="mr-3 text-lg">
+                                  📚
+                                </span>
+
+                                <span className="min-w-0 flex-1 truncate">
+                                  {course}
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-4 py-6 text-center text-sm text-gray-500">
+                              No matching course found.
+                            </div>
+                          )}
+
+                        </div>
+                      </div>
+                    )}
+
                   </div>
 
+                  {/* SEARCH BUTTON */}
                   <button
                     type="button"
                     onClick={() => {
                       if (filteredCourses.length > 0) {
                         selectCourse(filteredCourses[0]);
+                        setShowCourseList(false);
                       }
                     }}
                     disabled={filteredCourses.length === 0}
@@ -253,55 +305,41 @@ function selectCourse(course: string) {
                   >
                     Search Courses
                   </button>
+
                 </div>
 
+                {/* POPULAR COURSES */}
                 <div className="mt-3 flex flex-wrap items-center gap-2 px-1 text-sm">
-                  <span className="font-semibold text-gray-500">Popular:</span>
 
-                  {["Quran & Tajweed", "Hifz-ul-Quran", "Arabic", "English"].map(
-                    (course) => (
-                      <button
-                        key={course}
-                        type="button"
-                        onClick={() => selectCourse(course)}
-                        className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-                      >
-                        {course}
-                      </button>
-                    ),
-                  )}
+                  <span className="font-semibold text-gray-500">
+                    Popular:
+                  </span>
+
+                  {[
+                    "Quran & Tajweed",
+                    "Hifz-ul-Quran",
+                    "Arabic",
+                    "English",
+                  ].map((course) => (
+                    <button
+                      key={course}
+                      type="button"
+                      onClick={() => {
+                        selectCourse(course);
+                        setShowCourseList(false);
+                      }}
+                      className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      {course}
+                    </button>
+                  ))}
+
                 </div>
+
               </div>
-
-              {showCourseList && (
-                <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-                  <div className="border-b bg-gray-50 px-5 py-3 text-sm font-semibold text-gray-500">
-                    Choose a course
-                  </div>
-
-                  <div className="max-h-80 overflow-y-auto p-2">
-                    {filteredCourses.length > 0 ? (
-                      filteredCourses.map((course) => (
-                        <button
-                          key={course}
-                          type="button"
-                          onClick={() => selectCourse(course)}
-                          className="flex w-full items-center rounded-xl px-4 py-3 text-left font-medium text-gray-800 transition hover:bg-blue-50 hover:text-blue-700"
-                        >
-                          <span className="mr-3 text-lg">📚</span>
-                          {course}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">
-                        No matching course found.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
+            {/* REQUIREMENT BUTTON */}
             <div className="mt-5">
               <a
                 href="/requirement"
@@ -321,8 +359,8 @@ function selectCourse(course: string) {
               <span>✓ Flexible timings</span>
               <span>✓ Experienced teachers</span>
             </div>
-          </div>
 
+          </div>
           {/* HERO CARD */}
           <div className="mx-auto w-full max-w-md">
             <div className="rounded-3xl bg-white p-5 shadow-2xl">

@@ -1,12 +1,21 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const subjects = [
-  "Quran & Tajweed",
-  "Hifz-ul-Quran",
-  "Islamic Studies",
+  "Madni Qaida/Nazra Course",
+  "Qaida Teacher Course",
+  "Dars e nizami",
+  "Teacher Nazra Course",
+  "Hifz-e-Quran",
+  "Tajweed-o-Quran",
+  "Husne Quran Course",
+  "Tafseer-e-Noor",
+  "Hifz 40 Hadith",
+  "Hadith Course",
+  "Tafseer-e-Quran",
+  "Farz Uloom",
   "Arabic",
   "English",
   "Hindi",
@@ -19,8 +28,19 @@ const subjects = [
 
 const languages = ["Hindi", "Urdu", "English", "Arabic"];
 
-export default function RequirementPage() {
+export default function RequirementPage() {const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const course = params.get("course");
+
+  if (course) {
+    const decodedCourse = decodeURIComponent(course);
+
+    setSelectedCourse(decodedCourse);
+    setSelectedSubjects([decodedCourse]);
+  }
+}, []);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   const [teacherGender, setTeacherGender] = useState("Any");
@@ -36,7 +56,17 @@ export default function RequirementPage() {
   const [level, setLevel] = useState("");
   const [classesPerWeek, setClassesPerWeek] = useState("1 class");
   const [preferredTime, setPreferredTime] = useState("Morning");
-  const [preferredDays, setPreferredDays] = useState("");
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+
+const weekDays = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
   const [monthlyBudget, setMonthlyBudget] = useState("");
   const [city, setCity] = useState("");
@@ -62,6 +92,13 @@ export default function RequirementPage() {
         : [...current, language]
     );
   }
+  function togglePreferredDay(day: string) {
+  setPreferredDays((current) =>
+    current.includes(day)
+      ? current.filter((item) => item !== day)
+      : [...current, day]
+  );
+}
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
@@ -110,26 +147,13 @@ export default function RequirementPage() {
       console.log("CURRENT USER:", user);
       console.log("USER ERROR:", userError);
 
-      if (userError) {
-        setError(
-          "Could not verify login: " + userError.message
-        );
-        return;
-      }
-
-      if (!user) {
-        setError(
-          "Please login before submitting a learning requirement."
-        );
-        return;
-      }
 
       // ---------------------------------------
       // 2. PREPARE DATABASE DATA
       // ---------------------------------------
 
       const requirementData = {
-        user_id: user.id,
+        user_id: user?.id ?? null,
 
         parent_student_name: name.trim(),
         mobile_number: phone.trim(),
@@ -146,7 +170,8 @@ export default function RequirementPage() {
 
         classes_per_week: classesPerWeek,
         preferred_time: preferredTime,
-        preferred_days: preferredDays.trim(),
+        preferred_days: preferredDays.join(", "),
+        
 
         monthly_budget: monthlyBudget
           ? Number(monthlyBudget)
@@ -167,24 +192,14 @@ export default function RequirementPage() {
       // 3. INSERT INTO SUPABASE
       // ---------------------------------------
 
-      const {
-        data: insertedRequirement,
-        error: insertError,
-      } = await supabase
-        .from("learning_requirements")
-        .insert(requirementData)
-        .select()
-        .single();
+      const { error: insertError } = await supabase
+  .from("learning_requirements")
+  .insert(requirementData);
 
-      console.log(
-        "INSERTED REQUIREMENT:",
-        insertedRequirement
-      );
-
-      console.log(
-        "INSERT ERROR:",
-        insertError
-      );
+console.log(
+  "INSERT ERROR:",
+  insertError
+);
 
       // ---------------------------------------
       // 4. CHECK INSERT ERROR
@@ -200,24 +215,14 @@ export default function RequirementPage() {
       // ---------------------------------------
       // 5. MAKE SURE ROW WAS CREATED
       // ---------------------------------------
-
-      if (!insertedRequirement) {
-        setError(
-          "Requirement was not saved. No database row was returned."
-        );
-        return;
-      }
-
+      
       // ---------------------------------------
       // 6. SUCCESS
       // ---------------------------------------
 
-      console.log(
-        "SUCCESS - DATABASE ROW CREATED:",
-        insertedRequirement
-      );
+    console.log("SUCCESS - DATABASE ROW CREATED");
 
-      setSubmitted(true);
+setSubmitted(true);
     } catch (err) {
       console.error("REQUIREMENT SUBMIT ERROR:", err);
 
@@ -407,7 +412,17 @@ export default function RequirementPage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              What do you want to learn?
+              What do you want to learn?{selectedCourse && (
+  <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+    <p className="text-sm font-semibold text-blue-600">
+      Selected Course
+    </p>
+
+    <p className="mt-1 text-lg font-bold text-blue-900">
+      ✓ {selectedCourse}
+    </p>
+  </div>
+)}
             </h2>
 
             <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -553,27 +568,39 @@ export default function RequirementPage() {
 
             <div className="mt-5 grid gap-5 md:grid-cols-2">
 
-              <div>
-                <label className="mb-2 block font-semibold">
-                  Classes Per Week
-                </label>
+              <div className="md:col-span-2">
+  <label className="mb-3 block font-semibold">
+    Preferred Class Days *
+  </label>
 
-                <select
-                  value={classesPerWeek}
-                  onChange={(e) =>
-                    setClassesPerWeek(e.target.value)
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3"
-                >
-                  <option>1 class</option>
-                  <option>2 classes</option>
-                  <option>3 classes</option>
-                  <option>4 classes</option>
-                  <option>5 classes</option>
-                  <option>6 classes</option>
-                  <option>7 classes</option>
-                </select>
-              </div>
+  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
+    {weekDays.map((day) => {
+      const selected = preferredDays.includes(day);
+
+      return (
+        <button
+          key={day}
+          type="button"
+          onClick={() => togglePreferredDay(day)}
+          className={`rounded-xl border px-3 py-3 text-sm font-semibold transition-all ${
+            selected
+              ? "border-blue-600 bg-blue-600 text-white shadow-md"
+              : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+          }`}
+        >
+          <span className="flex items-center justify-center gap-1.5">
+            {selected && <span>✓</span>}
+            {day}
+          </span>
+        </button>
+      );
+    })}
+  </div>
+
+  <p className="mt-3 text-sm text-slate-500">
+    Select the days you would prefer for your classes.
+  </p>
+</div>
 
               <div>
                 <label className="mb-2 block font-semibold">
@@ -604,8 +631,12 @@ export default function RequirementPage() {
                   type="text"
                   value={preferredDays}
                   onChange={(e) =>
-                    setPreferredDays(e.target.value)
-                  }
+setPreferredDays(
+  e.target.value
+    .split(",")
+    .map((day) => day.trim())
+    .filter(Boolean)
+)                  }
                   placeholder="Example: Monday, Wednesday, Friday"
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
