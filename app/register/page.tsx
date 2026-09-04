@@ -17,30 +17,12 @@ const subjects = [
 ];
 
 const languages = ["Hindi", "Urdu", "English", "Arabic"];
+
 export default function RegisterTeacher() {
-  const [cityLocation, setCityLocation] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("");
-  <div>
-  <label className="mb-2 block text-sm font-semibold">
-    City / Location *
-  </label>
-
-  <input
-    required
-    value={cityLocation}
-    onChange={(e) => setCityLocation(e.target.value)}
-    type="text"
-    placeholder="e.g. Bareilly, Uttar Pradesh"
-    className="w-full rounded-xl border px-4 py-3 outline-none focus:border-blue-500"
-  />
-
-  <p className="mt-2 text-xs text-slate-500">
-    Enter the city and state where you are based.
-  </p>
-</div>
   const [qualification, setQualification] = useState("");
   const [experience, setExperience] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -51,7 +33,6 @@ export default function RegisterTeacher() {
   const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -108,11 +89,6 @@ export default function RegisterTeacher() {
         setLoading(false);
         return;
       }
-      if (!cityLocation.trim()) {
-  setError("Please enter your city / location.");
-  setLoading(false);
-  return;
-}
 
       if (!experience) {
         setError("Please select your teaching experience.");
@@ -168,13 +144,12 @@ export default function RegisterTeacher() {
           password,
           options: {
             data: {
-  name: name.trim(),
-  phone: phone.trim(),
-  role: "teacher",
-  gender,
-  qualification: qualification.trim(),
-  city_location: cityLocation.trim(),
-},
+              name: name.trim(),
+              phone: phone.trim(),
+              role: "teacher",
+              gender,
+              qualification: qualification.trim(),
+            },
           },
         });
 
@@ -293,12 +268,11 @@ export default function RegisterTeacher() {
           p_bio: bio.trim(),
           p_subjects: selectedSubjects,
           p_experience: experience,
-          p_city_location: cityLocation.trim(),
           p_languages: selectedLanguages,
           p_teaching_mode: mode,
+          p_fee_weekly: feeWeekly ? Number(feeWeekly) : null,
           p_fee_monthly: feeMonthly ? Number(feeMonthly) : null,
           p_profile_photo_url: null,
-  
         });
 
       if (profileError) {
@@ -980,4 +954,4 @@ export default function RegisterTeacher() {
 
     </main>
   );
-  }
+}
