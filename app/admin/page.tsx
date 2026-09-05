@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
-
 type Requirement = {
   id: string;
   user_id: string;
@@ -28,6 +27,17 @@ type Requirement = {
   created_at: string;
   updated_at: string | null;
   status: RequirementStatus;
+};
+type Teacher = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  subjects: string[] | null;
+  gender: string | null;
+  qualification: string | null;
+  city_location: string | null;
+  is_verified: boolean;
 };
 
 const statuses: Array<"All" | RequirementStatus> = [
@@ -51,6 +61,11 @@ export default function AdminPage() {
   const [error, setError] = useState("");
 
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+const [showTeacherMatcher, setShowTeacherMatcher] = useState(false);
+const [teacherLoading, setTeacherLoading] = useState(false);
+const [connectingTeacherId, setConnectingTeacherId] =
+  useState<string | null>(null);
 
   async function verifyAdmin() {
     const {
@@ -105,7 +120,71 @@ export default function AdminPage() {
       setLoading(false);
     }
   }
+async function loadVerifiedTeachers() {
+  setTeacherLoading(true);
+  setError("");
 
+  const { data, error: teacherError } = await supabase
+    .from("teacher_profiles")
+    .select(
+      "id, full_name, email, phone, subjects, gender, qualification, city_location, is_verified"
+    )
+    .eq("is_verified", true)
+    .order("full_name", { ascending: true });
+
+  if (teacherError) {
+    console.error("TEACHER LOAD ERROR:", teacherError);
+    setError(`Could not load teachers: ${teacherError.message}`);
+    setTeachers([]);
+    setTeacherLoading(false);
+    return;
+  }
+
+  setTeachers((data || []) as Teacher[]);
+  setTeacherLoading(false);
+}
+async function connectTeacherToRequirement(
+  requirement: Requirement,
+  teacher: Teacher
+) {
+  setConnectingTeacherId(teacher.id);
+  setError("");
+
+  const { error: matchError } = await supabase
+    .from("requirement_teacher_matches")
+    .insert({
+      requirement_id: requirement.id,
+      teacher_id: teacher.id,
+      status: "connected",
+    });
+
+  if (matchError) {
+    console.error("TEACHER MATCH ERROR:", matchError);
+    setError(`Could not connect teacher: ${matchError.message}`);
+    setConnectingTeacherId(null);
+    return;
+  }
+
+  setRequirements((current) =>
+    current.map((item) =>
+      item.id === requirement.id
+        ? { ...item, status: "matched" }
+        : item
+    )
+  );
+
+  setSelectedRequirement({
+    ...requirement,
+    status: "matched",
+  });
+
+  setShowTeacherMatcher(false);
+  setConnectingTeacherId(null);
+
+  alert(
+    `${teacher.full_name || "Teacher"} has been connected successfully.`
+  );
+}
   async function updateStatus(
     requirement: Requirement,
     status: RequirementStatus
@@ -662,20 +741,127 @@ export default function AdminPage() {
                 Close
               </button>
 
-              <button
-                onClick={() => {
-                  alert(
-                    "Teacher matching will be added in the next step."
-                  );
-                }}
-                className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
-              >
-                Match Teachers
-              </button>
+             <button
+  onClick={() => {
+    setShowTeacherMatcher(true);
+    void loadVerifiedTeachers();
+  }}
+  className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+>
+  Match Teachers
+</button>
             </div>
           </div>
         </div>
       )}
+      {showTeacherMatcher && selectedRequirement && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+      <div className="flex items-center justify-between border-b px-6 py-5">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            Connect a Teacher
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Choose any verified teacher for this requirement.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowTeacherMatcher(false)}
+          className="rounded-lg px-3 py-2 text-xl text-slate-500 hover:bg-slate-100"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="max-h-[65vh] overflow-y-auto p-6">
+
+        {teacherLoading ? (
+          <div className="py-10 text-center text-slate-500">
+            Loading verified teachers...
+          </div>
+        ) : teachers.length === 0 ? (
+          <div className="rounded-xl bg-slate-50 p-6 text-center">
+            <p className="font-semibold text-slate-700">
+              No verified teachers found.
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Verify a teacher first from Teacher Verification.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {teachers.map((teacher) => (
+              <div
+                key={teacher.id}
+                className="rounded-xl border border-slate-200 p-4 transition hover:border-blue-300 hover:bg-blue-50/40"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900">
+                      {teacher.full_name || "Teacher"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {teacher.qualification || "Qualification not specified"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-600">
+                      {teacher.subjects?.length
+                        ? teacher.subjects.join(", ")
+                        : "Subjects not specified"}
+                    </p>
+
+                    {teacher.city_location && (
+                      <p className="mt-1 text-sm text-slate-500">
+                        {teacher.city_location}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={connectingTeacherId === teacher.id}
+                    onClick={() =>
+                      void connectTeacherToRequirement(
+                        selectedRequirement,
+                        teacher
+                      )
+                    }
+                    className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {connectingTeacherId === teacher.id
+                      ? "Connecting..."
+                      : "Connect Teacher"}
+                  </button>
+
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
+
+      <div className="border-t bg-slate-50 px-6 py-4">
+        <button
+          type="button"
+          onClick={() => setShowTeacherMatcher(false)}
+          className="rounded-xl border bg-white px-5 py-2.5 font-semibold hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
     </main>
   );
 }
