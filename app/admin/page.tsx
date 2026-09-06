@@ -165,6 +165,48 @@ async function connectTeacherToRequirement(
     return;
   }
 
+  // Persist the requirement status so it survives page reloads.
+  const { error: statusError } = await supabase
+    .from("learning_requirements")
+    .update({ status: "matched" })
+    .eq("id", requirement.id);
+
+  if (statusError) {
+    console.error("REQUIREMENT STATUS ERROR:", statusError);
+    setError(
+      `Teacher connected, but status could not be saved: ${statusError.message}`
+    );
+    setConnectingTeacherId(null);
+    return;
+  }
+
+  // Notify the teacher. Message contains no private student contact
+  // details (name, phone, email) and no budget/fee information.
+  const { error: notifyError } = await supabase
+    .from("notifications")
+    .insert({
+      user_id: teacher.id,
+      title: "New student requirement",
+      message: `A new ${
+        requirement.subjects?.length
+          ? requirement.subjects.join(", ")
+          : "learning"
+      } requirement has been assigned to you. Please review and respond.`,
+      type: "teacher_match",
+      related_requirement_id: requirement.id,
+      related_teacher_id: teacher.id,
+      is_read: false,
+    });
+
+  if (notifyError) {
+    console.error("NOTIFICATION ERROR:", notifyError);
+    setError(
+      `Teacher connected, but notification could not be sent: ${notifyError.message}`
+    );
+    setConnectingTeacherId(null);
+    return;
+  }
+
   setRequirements((current) =>
     current.map((item) =>
       item.id === requirement.id
