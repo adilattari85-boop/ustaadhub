@@ -1,8 +1,10 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { courseUrduLabels } from "@/lib/urdu";
 
 type TeacherProfile = {
   id: string;
@@ -38,6 +40,163 @@ function formatFee(value: number | null, period: "week" | "month") {
   return `₹${value.toLocaleString("en-IN")}/${period}`;
 }
 
+const copy = {
+  en: {
+    findTeachers: "Find Teachers",
+    subjects: "Subjects",
+    howItWorks: "How It Works",
+    login: "Login",
+    joinAsTeacher: "Join as Teacher",
+    heroBadge: "✨ Learn from trusted teachers",
+    heroTitleA: "Find the right",
+    heroTitleC: "for you.",
+    heroDescription:
+      "Learn Quran, Islamic Studies, Arabic, languages and more from experienced teachers through personalised one-to-one online classes.",
+    searchPlaceholder: "Search a course or subject...",
+    matchingCourses: "Matching courses",
+    popularCourses: "Popular courses",
+    noMatchingCourse: "No matching course found.",
+    searchCourses: "Search Courses",
+    popular: "Popular:",
+    postRequirement: "📝 Post Your Learning Requirement",
+    tellUs:
+      "Tell us what you want to learn — we’ll help you find the right teacher.",
+    oneToOne: "✓ One-to-one classes",
+    flexibleTimings: "✓ Flexible timings",
+    experiencedTeachers: "✓ Experienced teachers",
+    journeyStarts: "Your learning journey starts here",
+    connectRight: "Connect with the right teacher for your goals.",
+    classes: "Classes",
+    teachers: "Teachers",
+    learning: "Learning",
+    exploreSubjects: "EXPLORE SUBJECTS",
+    whatLearn: "What do you want to learn?",
+    chooseSubject:
+      "Choose a subject and discover teachers who can help you learn at your own pace.",
+    findTeacher: "Find a teacher →",
+    featuredTeachers: "FEATURED TEACHERS",
+    learnExperienced: "Learn from experienced teachers",
+    discoverVerified:
+      "Discover verified teachers based on their expertise and fees.",
+    viewAll: "View all teachers →",
+    loadingVerified: "Loading verified teachers...",
+    teachersError:
+      "Unable to load featured teachers. Please refresh the page and try again.",
+    noVerified: "No verified teachers available yet.",
+    subjectsNotSpecified: "Subjects not specified",
+    verified: "✓ Verified",
+    experience: "Experience",
+    notSpecified: "Not specified",
+    teachingMode: "Teaching mode",
+    languages: "Languages",
+    fees: "Fees",
+    viewProfile: "View Profile",
+    simpleProcess: "SIMPLE PROCESS",
+    howWorks: "How UstaadHub works",
+    step1Title: "Choose what to learn",
+    step1Desc:
+      "Select Quran, Arabic, languages, Islamic Studies or another subject.",
+    step2Title: "Find your teacher",
+    step2Desc: "Explore teacher profiles, experience, ratings and fees.",
+    step3Title: "Start learning",
+    step3Desc:
+      "Choose a suitable time and begin your personalised classes.",
+    startToday: "Start Learning Today",
+    rightTeacher: "Find the Right Teacher for You",
+    demoDesc:
+      "Book a demo class and experience the right learning approach before you decide.",
+    bookDemo: "🎓 Book a Demo Class",
+    rightsReserved: "© 2026 UstaadHub. All rights reserved.",
+    about: "About",
+    contact: "Contact",
+    privacy: "Privacy",
+    terms: "Terms",
+  },
+  ur: {
+    findTeachers: "اساتذہ تلاش کریں",
+    subjects: "مضامین",
+    howItWorks: "یہ کیسے کام کرتا ہے؟",
+    login: "لاگ اِن",
+    joinAsTeacher: "بطور استاد شامل ہوں",
+    heroBadge: "✨ معتبر اساتذہ سے سیکھیں",
+    heroTitleA: "اپنے لیے صحیح",
+    heroTitleC: "تلاش کریں۔",
+    heroDescription:
+      "قرآن، اسلامیات، عربی، زبانیں اور مزید مضامین تجربہ کار اساتذہ سے ذاتی نوعیت کی ون آن ون آن لائن کلاسز کے ذریعے سیکھیں۔",
+    searchPlaceholder: "کورس یا مضمون تلاش کریں...",
+    matchingCourses: "مماثل کورسز",
+    popularCourses:"مقبول کورسز",
+    noMatchingCourse:"کوئی مماثل کورس نہیں ملا۔",
+    searchCourses:"کورسز تلاش کریں",
+    popular:"مقبول:",
+    postRequirement:"📝 اپنی تعلیمی ضرورت پوسٹ کریں",
+    tellUs:
+      "ہمیں بتائیں کہ آپ کیا سیکھنا چاہتے ہیں — ہم آپ کے لیے صحیح استاد تلاش کرنے میں مدد کریں گے۔",
+    oneToOne:"✓ ون آن ون کلاسز",
+    flexibleTimings:"✓ لچکدار اوقات",
+    experiencedTeachers:"✓ تجربہ کار اساتذہ",
+    journeyStarts:"آپ کے سیکھنے کا سفر یہاں سے شروع ہوتا ہے",
+    connectRight:"اپنے مقاصد کے لیے صحیح استاد سے جڑیں۔",
+    classes:"کلاسز",
+    teachers:"اساتذہ",
+    learning:"سیکھنا",
+    exploreSubjects:"مضامین دریافت کریں",
+    whatLearn:"آپ کیا سیکھنا چاہتے ہیں؟",
+    chooseSubject:
+      "ایک مضمون منتخب کریں اور ایسے اساتذہ تلاش کریں جو آپ کی اپنی رفتار سے سیکھنے میں مدد کر سکیں۔",
+    findTeacher:"استاد تلاش کریں ←",
+    featuredTeachers:"نمایاں اساتذہ",
+    learnExperienced:"تجربہ کار اساتذہ سے سیکھیں",
+    discoverVerified:
+      "تصدیق شدہ اساتذہ کو ان کی مہارت اور فیسیں دیکھ کر تلاش کریں۔",
+    viewAll:"تمام اساتذہ دیکھیں ←",
+    loadingVerified:"تصدیق شدہ اساتذہ لوڈ ہو رہے ہیں...",
+    teachersError:
+      "نمایاں اساتذہ لوڈ نہیں ہو سکے۔ براہ کرم صفحہ دوبارہ لوڈ کر کے کوشش کریں۔",
+    noVerified:"ابھی کوئی تصدیق شدہ استاد دستیاب نہیں۔",
+    subjectsNotSpecified:"مضامین متعین نہیں",
+    verified:"✓ تصدیق شدہ",
+    experience:"تجربہ",
+    notSpecified:"متعین نہیں",
+    teachingMode:"تدریس کا طریقہ",
+    languages:"زبانیں",
+    fees:"فیسیں",
+    viewProfile:"پروفائل دیکھیں",
+    simpleProcess:"آسان طریقہ کار",
+    howWorks:"UstaadHub کیسے کام کرتا ہے؟",
+    step1Title:"انتخاب کریں کہ کیا سیکھنا ہے",
+    step1Desc:
+      "قرآن، عربی، زبانیں، اسلامیات یا کوئی اور مضمون منتخب کریں۔",
+    step2Title:"اپنا استاد تلاش کریں",
+    step2Desc:
+      "اساتذہ کے پروفائلز، تجربہ، درجہ بندی اور فیسیں دیکھیں۔",
+    step3Title:"سیکھنا شروع کریں",
+    step3Desc:
+      "مناسب وقت منتخب کریں اور اپنی ذاتی نوعیت کی کلاسز شروع کریں۔",
+    startToday:"آج ہی سیکھنا شروع کریں",
+    rightTeacher:"اپنے لیے صحیح استاد تلاش کریں",
+    demoDesc:
+      "فیصلہ کرنے سے پہلے ڈیمو کلاس بک کریں اور سیکھنے کا صحیح طریقہ آزمائیں۔",
+    bookDemo:"🎓 ڈیمو کلاس بک کریں",
+    rightsReserved:"© 2026 UstaadHub۔ جملہ حقوق محفوظ ہیں۔",
+    about:"ہمارے بارے میں",
+    contact:"رابطہ",
+    privacy:"رازداری",
+    terms:"شرائط",
+  },
+};
+
+const categoryUrdu: Record<string, string> = {
+  "Quran & Tajweed": "قرآن و تجوید",
+  "Hifz-ul-Quran": "حفظ القرآن",
+  "Islamic Studies": "اسلامیات",
+  "Dua & Salah": "دعا و نماز",
+  "Arabic": "عربی",
+  "English": "انگریزی",
+  "Hindi": "ہندی",
+  "Urdu": "اردو",
+};
+
 const categories = [
   ["📖", "Quran & Tajweed"],
   ["🌙", "Hifz-ul-Quran"],
@@ -52,14 +211,49 @@ const categories = [
 const MAX_RETRIES = 3;
 const REQUEST_TIMEOUT = 10000;
 
-export default function Home() {
+type Locale = "en" | "ur";
+
+type HomeProps = {
+  locale?: Locale;
+};
+
+export default function Home({ locale = "en" }: HomeProps) {
   const [featuredTeachers, setFeaturedTeachers] = useState<TeacherProfile[]>(
     [],
   );
+  const [verifiedTeacherCount, setVerifiedTeacherCount] = useState(0);
   const [teachersLoading, setTeachersLoading] = useState(true);
   const [teachersError, setTeachersError] = useState("");
   const [courseSearch, setCourseSearch] = useState("");
-const [showCourseList, setShowCourseList] = useState(false);
+  const [showCourseList, setShowCourseList] = useState(false);
+  const courseSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        courseSearchRef.current &&
+        !courseSearchRef.current.contains(event.target as Node)
+      ) {
+        setShowCourseList(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowCourseList(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const isUrdu = locale === "ur";
+  const t = copy[locale];
 
 const courses = [
   "Madni Qaida / Nazra Course",
@@ -85,7 +279,7 @@ const filteredCourses = courses.filter((course) =>
 );
 
 function selectCourse(course: string) {
-  window.location.href = `/requirement?course=${encodeURIComponent(course)}`;
+  window.location.href = `/requirement?course=${encodeURIComponent(course)}${isUrdu ? "&lang=ur" : ""}`;
 }
 
   useEffect(() => {
@@ -109,12 +303,12 @@ function selectCourse(course: string) {
         );
 
         try {
-          const { data, error } = await supabase
-            .from("teacher_profiles")
-            .select(teacherColumns)
-            .eq("is_verified", true)
-            .limit(3)
-            .abortSignal(controller.signal);
+          const { data, error, count } = await supabase
+  .from("teacher_profiles")
+  .select(teacherColumns, { count: "exact" })
+  .eq("is_verified", true)
+  .limit(3)
+  .abortSignal(controller.signal);
 
           window.clearTimeout(timeoutId);
 
@@ -127,6 +321,7 @@ function selectCourse(course: string) {
           }
 
           setFeaturedTeachers((data || []) as unknown as TeacherProfile[]);
+          setVerifiedTeacherCount(count ?? 0);
           setTeachersError("");
           setTeachersLoading(false);
           return;
@@ -172,29 +367,31 @@ function selectCourse(course: string) {
 
           <div className="hidden items-center gap-8 md:flex">
             <a href="#teachers" className="text-gray-700 hover:text-blue-700">
-              Find Teachers
+              {t.findTeachers}
             </a>
             <a href="#subjects" className="text-gray-700 hover:text-blue-700">
-              Subjects
+              {t.subjects}
             </a>
             <a href="#how" className="text-gray-700 hover:text-blue-700">
-              How It Works
+              {t.howItWorks}
             </a>
           </div>
 
           <div className="flex items-center gap-2">
-            <a
-              href="/login"
+  <LanguageSwitcher />
+
+          <a
+    href="/login"
               className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100"
             >
-              Login
+              {t.login}
             </a>
 
             <a
               href="/register"
               className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800"
             >
-              Join as Teacher
+              {t.joinAsTeacher}
             </a>
           </div>
         </div>
@@ -202,22 +399,32 @@ function selectCourse(course: string) {
  <section className="overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:grid-cols-2 md:items-center md:py-28">
       {/* HERO */}
-  <div>
+  <div className={isUrdu ? "min-w-0" : undefined}>
 
             <div className="mb-6 inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
-              ✨ Learn from trusted teachers
+              {t.heroBadge}
             </div>
 
-            <h1 className="text-5xl font-extrabold leading-tight tracking-tight md:text-6xl">
-              Find the right
-              <span className="text-blue-700"> Ustaad </span>
-              for you.
+            <h1
+              className={
+                isUrdu
+                  ? "text-4xl font-extrabold leading-normal tracking-normal md:text-5xl"
+                  : "text-5xl font-extrabold leading-tight tracking-tight md:text-6xl"
+              }
+            >
+              {t.heroTitleA}
+              <span className="text-blue-700">{isUrdu ? " استاد " : " Ustaad "}</span>
+              {t.heroTitleC}
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-8 text-gray-600">
-              Learn Quran, Islamic Studies, Arabic, languages and more from
-              experienced teachers through personalised one-to-one online
-              classes.
+            <p
+              className={
+                isUrdu
+                  ? "mt-6 max-w-xl text-lg leading-9 text-gray-600"
+                  : "mt-6 max-w-xl text-lg leading-8 text-gray-600"
+              }
+            >
+              {t.heroDescription}
             </p>
 
             {/* COURSE SEARCH */}
@@ -227,7 +434,10 @@ function selectCourse(course: string) {
                 <div className="flex flex-col gap-3 sm:flex-row">
 
                   {/* SEARCH INPUT + COURSE DROPDOWN */}
-                  <div className="relative min-w-0 flex-1">
+                  <div
+                    ref={courseSearchRef}
+                    className="relative min-w-0 flex-1"
+                  >
 
                     <div className="relative">
                       <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400">
@@ -242,7 +452,7 @@ function selectCourse(course: string) {
                           setShowCourseList(true);
                         }}
                         onFocus={() => setShowCourseList(true)}
-                        placeholder="Search a course or subject..."
+                        placeholder={t.searchPlaceholder}
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 py-4 pl-12 pr-4 text-base outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:text-lg"
                       />
                     </div>
@@ -253,8 +463,8 @@ function selectCourse(course: string) {
 
                         <div className="border-b bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-600">
                           {courseSearch.trim()
-                            ? "Matching courses"
-                            : "Popular courses"}
+                            ? t.matchingCourses
+                            : t.popularCourses}
                         </div>
 
                         <div className="max-h-64 overflow-y-auto p-2">
@@ -275,13 +485,13 @@ function selectCourse(course: string) {
                                 </span>
 
                                 <span className="min-w-0 flex-1 truncate">
-                                  {course}
+                                  {isUrdu ? (courseUrduLabels[course] ?? course) : course}
                                 </span>
                               </button>
                             ))
                           ) : (
                             <div className="px-4 py-6 text-center text-sm text-gray-500">
-                              No matching course found.
+                              {t.noMatchingCourse}
                             </div>
                           )}
 
@@ -303,7 +513,7 @@ function selectCourse(course: string) {
                     disabled={filteredCourses.length === 0}
                     className="w-full rounded-xl bg-blue-700 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:text-lg"
                   >
-                    Search Courses
+                    {t.searchCourses}
                   </button>
 
                 </div>
@@ -312,7 +522,7 @@ function selectCourse(course: string) {
                 <div className="mt-3 flex flex-wrap items-center gap-2 px-1 text-sm">
 
                   <span className="font-semibold text-gray-500">
-                    Popular:
+                    {t.popular}
                   </span>
 
                   {[
@@ -330,7 +540,7 @@ function selectCourse(course: string) {
                       }}
                       className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                     >
-                      {course}
+                      {isUrdu ? (courseUrduLabels[course] ?? course) : course}
                     </button>
                   ))}
 
@@ -342,22 +552,21 @@ function selectCourse(course: string) {
             {/* REQUIREMENT BUTTON */}
             <div className="mt-5">
               <a
-                href="/requirement"
+                href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
                 className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-blue-800 sm:text-lg"
               >
-                📝 Post Your Learning Requirement
+                {t.postRequirement}
               </a>
 
               <p className="mt-3 text-sm text-gray-500">
-                Tell us what you want to learn — we&apos;ll help you find the
-                right teacher.
+                {t.tellUs}
               </p>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
-              <span>✓ One-to-one classes</span>
-              <span>✓ Flexible timings</span>
-              <span>✓ Experienced teachers</span>
+              <span>{t.oneToOne}</span>
+              <span>{t.flexibleTimings}</span>
+              <span>{t.experiencedTeachers}</span>
             </div>
 
           </div>
@@ -370,28 +579,30 @@ function selectCourse(course: string) {
                 </div>
 
                 <h2 className="mt-6 text-2xl font-bold">
-                  Your learning journey starts here
+                  {t.journeyStarts}
                 </h2>
 
                 <p className="mt-3 text-blue-100">
-                  Connect with the right teacher for your goals.
+                  {t.connectRight}
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-3 p-3">
                 <div className="rounded-xl bg-gray-50 p-4 text-center">
                   <div className="text-xl font-bold text-blue-700">1:1</div>
-                  <div className="mt-1 text-xs text-gray-500">Classes</div>
+                  <div className="mt-1 text-xs text-gray-500">{t.classes}</div>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4 text-center">
-                  <div className="text-xl font-bold text-blue-700">100+</div>
-                  <div className="mt-1 text-xs text-gray-500">Teachers</div>
+                  <div className="text-xl font-bold text-blue-700">
+  {verifiedTeacherCount}+
+</div>
+                  <div className="mt-1 text-xs text-gray-500">{t.teachers}</div>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4 text-center">
                   <div className="text-xl font-bold text-blue-700">24/7</div>
-                  <div className="mt-1 text-xs text-gray-500">Learning</div>
+                  <div className="mt-1 text-xs text-gray-500">{t.learning}</div>
                 </div>
               </div>
             </div>
@@ -403,15 +614,14 @@ function selectCourse(course: string) {
       <section id="subjects" className="py-20">
         <div className="mx-auto max-w-7xl px-5">
           <div className="text-center">
-            <p className="font-semibold text-blue-700">EXPLORE SUBJECTS</p>
+            <p className="font-semibold text-blue-700">{t.exploreSubjects}</p>
 
             <h2 className="mt-2 text-3xl font-bold md:text-4xl">
-              What do you want to learn?
+              {t.whatLearn}
             </h2>
 
             <p className="mx-auto mt-4 max-w-2xl text-gray-600">
-              Choose a subject and discover teachers who can help you learn at
-              your own pace.
+              {t.chooseSubject}
             </p>
           </div>
 
@@ -423,10 +633,10 @@ function selectCourse(course: string) {
               >
                 <div className="text-4xl">{icon}</div>
 
-                <h3 className="mt-4 font-bold">{title}</h3>
+                <h3 className="mt-4 font-bold">{isUrdu ? (categoryUrdu[title] ?? title) : title}</h3>
 
                 <p className="mt-2 text-sm text-gray-500">
-                  Find a teacher →
+                  {t.findTeacher}
                 </p>
               </div>
             ))}
@@ -440,15 +650,15 @@ function selectCourse(course: string) {
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <p className="font-semibold text-blue-700">
-                FEATURED TEACHERS
+                {t.featuredTeachers}
               </p>
 
               <h2 className="mt-2 text-3xl font-bold md:text-4xl">
-                Learn from experienced teachers
+                {t.learnExperienced}
               </h2>
 
               <p className="mt-3 text-gray-600">
-                Discover verified teachers based on their expertise and fees.
+                {t.discoverVerified}
               </p>
             </div>
 
@@ -456,21 +666,21 @@ function selectCourse(course: string) {
               href="/teachers"
               className="w-fit rounded-lg font-semibold text-blue-700 hover:text-blue-900"
             >
-              View all teachers →
+              {t.viewAll}
             </Link>
           </div>
 
           {teachersLoading ? (
             <div className="mt-10 rounded-2xl bg-white p-12 text-center shadow-sm">
-              Loading verified teachers...
+              {t.loadingVerified}
             </div>
           ) : teachersError ? (
             <div className="mt-10 rounded-2xl border border-red-200 bg-red-50 p-12 text-center text-red-700">
-              {teachersError}
+              {isUrdu ? t.teachersError : teachersError}
             </div>
           ) : featuredTeachers.length === 0 ? (
             <div className="mt-10 rounded-2xl bg-white p-12 text-center shadow-sm">
-              No verified teachers available yet.
+              {t.noVerified}
             </div>
           ) : (
             <div className="mt-10 grid gap-6 md:grid-cols-3">
@@ -503,41 +713,41 @@ function selectCourse(course: string) {
 
                         <p className="mt-1 text-sm text-blue-700">
                           {(teacher.subjects || []).slice(0, 2).join(" & ") ||
-                            "Subjects not specified"}
+                            isUrdu ? t.subjectsNotSpecified : "Subjects not specified"}
                         </p>
 
                         <span className="mt-2 inline-block rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
-                          ✓ Verified
+                          {t.verified}
                         </span>
                       </div>
                     </div>
 
                     <div className="border-t px-6 py-5">
                       <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-gray-500">Experience</span>
+                        <span className="text-gray-500">{t.experience}</span>
                         <span className="text-right font-semibold">
-                          {teacher.experience || "Not specified"}
+                          {teacher.experience || (isUrdu ? t.notSpecified : "Not specified")}
                         </span>
                       </div>
 
                       <div className="mt-3 flex justify-between gap-4 text-sm">
-                        <span className="text-gray-500">Teaching mode</span>
+                        <span className="text-gray-500">{t.teachingMode}</span>
                         <span className="text-right font-semibold">
-                          {teacher.teaching_mode || "Not specified"}
+                          {teacher.teaching_mode || (isUrdu ? t.notSpecified : "Not specified")}
                         </span>
                       </div>
 
                       <div className="mt-3 flex justify-between gap-4 text-sm">
-                        <span className="text-gray-500">Languages</span>
+                        <span className="text-gray-500">{t.languages}</span>
                         <span className="text-right font-semibold">
                           {(teacher.languages || []).join(", ") ||
-                            "Not specified"}
+                            isUrdu ? t.notSpecified : "Not specified"}
                         </span>
                       </div>
 
                       {(weeklyFee || monthlyFee) && (
                         <div className="mt-3 flex justify-between gap-4 text-sm">
-                          <span className="text-gray-500">Fees</span>
+                          <span className="text-gray-500">{t.fees}</span>
                           <span className="text-right font-semibold">
                             {[weeklyFee, monthlyFee]
                               .filter(Boolean)
@@ -551,7 +761,7 @@ function selectCourse(course: string) {
                           href={`/teachers/${teacher.id}`}
                           className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800"
                         >
-                          View Profile
+                          {t.viewProfile}
                         </Link>
                       </div>
                     </div>
@@ -567,10 +777,10 @@ function selectCourse(course: string) {
       <section id="how" className="py-20">
         <div className="mx-auto max-w-6xl px-5">
           <div className="text-center">
-            <p className="font-semibold text-blue-700">SIMPLE PROCESS</p>
+            <p className="font-semibold text-blue-700">{t.simpleProcess}</p>
 
             <h2 className="mt-2 text-3xl font-bold md:text-4xl">
-              How UstaadHub works
+              {t.howWorks}
             </h2>
           </div>
 
@@ -578,18 +788,18 @@ function selectCourse(course: string) {
             {[
               [
                 "01",
-                "Choose what to learn",
-                "Select Quran, Arabic, languages, Islamic Studies or another subject.",
+                t.step1Title,
+                t.step1Desc,
               ],
               [
                 "02",
-                "Find your teacher",
-                "Explore teacher profiles, experience, ratings and fees.",
+                t.step2Title,
+                t.step2Desc,
               ],
               [
                 "03",
-                "Start learning",
-                "Choose a suitable time and begin your personalised classes.",
+                t.step3Title,
+                t.step3Desc,
               ],
             ].map(([number, title, description]) => (
               <div key={number} className="text-center">
@@ -614,27 +824,26 @@ function selectCourse(course: string) {
 
     <div className="relative mx-auto max-w-3xl">
       <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-blue-100">
-        Start Learning Today
+        {t.startToday}
       </p>
 
       <h2 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl">
-        Find the Right Teacher for You
+        {t.rightTeacher}
       </h2>
 
       <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-blue-50 md:text-xl">
-        Book a demo class and experience the right learning approach
-        before you decide.
+        {t.demoDesc}
       </p>
 
       <a
-        href="/requirement"
+        href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
         className="mt-9 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-green-700 hover:shadow-xl"
       >
-        🎓 Book a Demo Class
+        {t.bookDemo}
       </a>
 
       <p className="mt-4 text-sm text-blue-100">
-        Tell us what you want to learn — we’ll help you find the right teacher.
+        {t.tellUs}
       </p>
     </div>
   </div>
@@ -643,17 +852,17 @@ function selectCourse(course: string) {
       {/* FOOTER */}
       <footer className="mt-10 border-t">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
-          <div>© 2026 UstaadHub. All rights reserved.</div>
+          <div>{t.rightsReserved}</div>
 
           <div className="flex gap-6">
-            <span className="cursor-pointer hover:text-blue-700">About</span>
+            <span className="cursor-pointer hover:text-blue-700">{t.about}</span>
             <span className="cursor-pointer hover:text-blue-700">
-              Contact
+              {t.contact}
             </span>
             <span className="cursor-pointer hover:text-blue-700">
-              Privacy
+              {t.privacy}
             </span>
-            <span className="cursor-pointer hover:text-blue-700">Terms</span>
+            <span className="cursor-pointer hover:text-blue-700">{t.terms}</span>
           </div>
         </div>
       </footer>

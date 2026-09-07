@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import MatchedTeacherSection from "@/components/MatchedTeacherSection";
 
 type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
 type Requirement = {
@@ -123,6 +124,9 @@ const [connectingTeacherId, setConnectingTeacherId] =
 async function loadVerifiedTeachers() {
   setTeacherLoading(true);
   setError("");
+
+
+
 
   const { data, error: teacherError } = await supabase
     .from("teacher_profiles")
@@ -471,7 +475,111 @@ async function connectTeacherToRequirement(
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
+            {/* Mobile / small-screen cards */}
+            <div className="md:hidden space-y-4">
+              {filteredRequirements.map((item) => {
+                const status = getStatus(item);
+
+                return (
+                  <div
+                    key={item.id}
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-900">
+                          {item.parent_student_name || "Not provided"}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {item.student_age
+                            ? `Age ${item.student_age}`
+                            : "Age not provided"}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                          status === "pending"
+                            ? "bg-blue-100 text-blue-700"
+                            : status === "contacted"
+                              ? "bg-orange-100 text-orange-700"
+                              : status === "matched"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+
+                    <dl className="mt-4 space-y-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Subject
+                        </dt>
+                        <dd className="min-w-0 text-right text-sm font-medium text-slate-900 break-words">
+                          {item.subjects?.length
+                            ? item.subjects.join(", ")
+                            : "Not specified"}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Level
+                        </dt>
+                        <dd className="text-sm text-slate-900">
+                          {item.current_level || "-"}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Mode
+                        </dt>
+                        <dd className="text-sm text-slate-900">
+                          {item.class_mode || "-"}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Timing
+                        </dt>
+                        <dd className="min-w-0 text-right text-sm text-slate-900 break-words">
+                          <p>{item.preferred_time || "-"}</p>
+                          {item.preferred_days && (
+                            <p className="text-xs text-slate-500">
+                              {item.preferred_days}
+                            </p>
+                          )}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Budget
+                        </dt>
+                        <dd className="text-sm text-slate-900">
+                          {formatBudget(item.monthly_budget)}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRequirement(item)}
+                      className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                    >
+                      View
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[1100px] text-left">
                 <thead className="border-b bg-slate-50 text-sm">
                   <tr>
@@ -571,6 +679,7 @@ async function connectTeacherToRequirement(
                   })}
                 </tbody>
               </table>
+            </div>
             </div>
           )}
         </div>
@@ -774,6 +883,8 @@ async function connectTeacherToRequirement(
                 <option value="closed">closed</option>
               </select>
             </div>
+
+            <MatchedTeacherSection requirementId={selectedRequirement.id} />
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <button

@@ -452,7 +452,7 @@ export default function RegisterTeacher() {
 
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-gray-900">
                 1. Personal Information
               </h2>
 
@@ -460,7 +460,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Full Name *
                   </label>
 
@@ -479,7 +479,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Email Address *
                   </label>
 
@@ -498,7 +498,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Mobile Number *
                   </label>
 
@@ -517,7 +517,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Gender *
                   </label>
 
@@ -554,7 +554,7 @@ export default function RegisterTeacher() {
 
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-gray-900">
                 2. Teaching Information
               </h2>
 
@@ -562,7 +562,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Qualification *
                   </label>
 
@@ -581,7 +581,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Teaching Experience *
                   </label>
 
@@ -628,7 +628,7 @@ export default function RegisterTeacher() {
 
               <div className="mt-7">
 
-                <label className="block text-sm font-semibold">
+                <label className="block text-sm font-semibold text-gray-900">
                   Subjects you teach *
                 </label>
 
@@ -638,7 +638,7 @@ export default function RegisterTeacher() {
 
                     <label
                       key={subject}
-                      className={`cursor-pointer rounded-xl border p-3 text-sm ${
+                      className={`cursor-pointer rounded-xl border p-3 text-sm text-gray-900 ${
                         selectedSubjects.includes(subject)
                           ? "border-blue-600 bg-blue-50 text-blue-700"
                           : "hover:border-blue-300"
@@ -674,7 +674,7 @@ export default function RegisterTeacher() {
 
               <div className="mt-7">
 
-                <label className="block text-sm font-semibold">
+                <label className="block text-sm font-semibold text-gray-900">
                   Languages you can teach in *
                 </label>
 
@@ -684,7 +684,7 @@ export default function RegisterTeacher() {
 
                     <label
                       key={language}
-                      className={`cursor-pointer rounded-xl border px-4 py-3 text-sm ${
+                      className={`cursor-pointer rounded-xl border px-4 py-3 text-sm text-gray-900 ${
                         selectedLanguages.includes(language)
                           ? "border-blue-600 bg-blue-50 text-blue-700"
                           : "hover:border-blue-300"
@@ -722,13 +722,13 @@ export default function RegisterTeacher() {
 
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-gray-900">
                 3. Classes & Fees
               </h2>
 
               <div className="mt-6">
 
-                <label className="block text-sm font-semibold">
+                <label className="block text-sm font-semibold text-gray-900">
                   Teaching Mode
                 </label>
 
@@ -743,7 +743,7 @@ export default function RegisterTeacher() {
                         onClick={() =>
                           setMode(item)
                         }
-                        className={`rounded-xl border p-4 font-medium ${
+                        className={`rounded-xl border p-4 font-medium text-gray-900 ${
                           mode === item
                             ? "border-blue-600 bg-blue-50 text-blue-700"
                             : "hover:border-blue-300"
@@ -763,7 +763,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Weekly Fee (₹)
                   </label>
 
@@ -782,7 +782,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Monthly Fee (₹)
                   </label>
 
@@ -812,13 +812,13 @@ export default function RegisterTeacher() {
 
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-gray-900">
                 4. About You
               </h2>
 
               <div className="mt-6">
 
-                <label className="mb-2 block text-sm font-semibold">
+                <label className="mb-2 block text-sm font-semibold text-gray-900">
                   Introduction *
                 </label>
 
@@ -841,7 +841,7 @@ export default function RegisterTeacher() {
 
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
 
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-gray-900">
                 5. Create Your Account
               </h2>
 
@@ -849,7 +849,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Password *
                   </label>
 
@@ -869,7 +869,7 @@ export default function RegisterTeacher() {
 
                 <div>
 
-                  <label className="mb-2 block text-sm font-semibold">
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
                     Confirm Password *
                   </label>
 

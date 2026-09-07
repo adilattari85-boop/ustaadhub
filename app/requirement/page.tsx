@@ -1,7 +1,14 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  courseUrduLabels,
+  languageUrduLabels,
+  optionUrduLabels,
+  requirementSubjectUrduLabels,
+  weekdayUrduLabels,
+} from "@/lib/urdu";
 
 const subjects = [
   "Madni Qaida/Nazra Course",
@@ -28,19 +35,137 @@ const subjects = [
 
 const languages = ["Hindi", "Urdu", "English", "Arabic"];
 
-export default function RequirementPage() {const [selectedCourse, setSelectedCourse] = useState("");
+const copy = {
+  en: {
+    subjectRequired: "Please select at least one subject.",
+    languageRequired: "Please select at least one preferred language.",
+    nameRequired: "Please enter student/parent name.",
+    phoneRequired: "Please enter mobile number.",
+    levelRequired: "Please select your current learning level.",
+    dbError: "Database error: ",
+    genericError: "Something went wrong. Please try again.",
+    successTitle: "Requirement Submitted!",
+    successDesc:
+      "Thank you. We have received your learning requirement. Our team can review itand help you find a suitable teacher.",
+    goHome: "Go Home",
+    browseTeachers: "Browse Teachers",
+    backToHome: "← Back to Home",
+    pageTitle: "Find the Right Teacher",
+    pageDesc: "Tell us what you want to learn and your preferred teacher.",
+    studentInfo: "Student Information",
+    nameLabel: "Student / Parent Name *",
+    namePlaceholder: "Enter name",
+    phoneLabel: "Mobile Number *",
+    phonePlaceholder: "Enter mobile number",
+    ageLabel: "Student Age",
+    agePlaceholder: "Age",
+    genderLabel: "Student Gender",
+    cityLabel: "City",
+    cityPlaceholder: "Your city",
+    whatLearn: "What do you want to learn?",
+    selectedCourseLabel: "Selected Course",
+    levelLabel: "Learning Level",
+    selectCurrentLevel: "Select current level",
+    teacherPref: "Teacher Preference",
+    teacherGenderLabel: "Teacher Gender",
+    classModeLabel: "Class Mode",
+    langLabel: "Preferred Teaching Language",
+    scheduleLabel: "Class Schedule",
+    preferredDaysLabel: "Preferred Class Days *",
+    daysHelper: "Select the days you would prefer for your classes.",
+    preferredTimeLabel: "Preferred Time",
+    preferredDaysTextLabel: "Preferred Days",
+    preferredDaysPlaceholder: "Example: Monday, Wednesday, Friday",
+    budgetLabel: "Budget",
+    monthlyBudgetLabel: "Monthly Budget",
+    budgetPlaceholder: "Example: 2000",
+    budgetHelper: "Leave blank if you are flexible.",
+    additionalLabel: "Additional Requirement",
+    additionalPlaceholder: "Tell us anything else we should know...",
+    errorPrefix: "Error:",
+    nextSteps: "What happens next?",
+    next1: "✓ We review your learning requirement.",
+    next2: "✓ We look for suitable teachers.",
+    next3: "✓ We can help you choose the right match.",
+    saving: "Saving Requirement...",
+    submit: "Submit Learning Requirement",
+    agreeNote:
+      "By submitting, you agree that UstaadHub may contact you regarding your learning requirement.",
+  },
+  ur: {
+    subjectRequired: "براہ کرم کم از کم ایک مضمون منتخب کریں۔",
+    languageRequired: "براہ کرم کم از کم ایک پسندیدہ زبان منتخب کریں۔",
+    nameRequired: "براہ کرم طالب علم / والدین کا نام درج کریں۔",
+    phoneRequired: "براہ کرم موبائل نمبر درج کریں۔",
+    levelRequired: "براہ کرم اپنی موجودہ تعلیمی سطح منتخب کریں۔",
+    dbError: "ڈیٹا بیس کی خرابی: ",
+    genericError: "کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔",
+    successTitle: "ضرورت جمع کر دی گئی!",
+    successDesc:
+      "شکریہ۔ ہمیں آپ کی تعلیمی ضرورت موصول ہو گئی ہے۔ ہماری ٹیم اس کا جائزہ لے کر آپ کے لیے موزوں استاد تلاش کرنے میں مدد کرے گی۔",
+    goHome: "ہوم پیج پر جائیں",
+    browseTeachers: "اساتذہ دیکھیں",
+    backToHome: "→ واپس ہوم پیج",
+    pageTitle:"اپنے لیے صحیح استاد تلاش کریں",
+    pageDesc:"ہمیں بتائیں کہ آپ کیا سیکھنا چاہتے ہیں اور آپ کو کس قسم کا استاد پسند ہے۔",
+    studentInfo: "طالب علم کی معلومات",
+    nameLabel: "طالب علم / والدین کا نام *",
+    namePlaceholder: "نام درج کریں",
+    phoneLabel: "موبائل نمبر *",
+    phonePlaceholder: "موبائل نمبر درج کریں",
+    ageLabel: "طالب علم کی عمر",
+    agePlaceholder: "عمر",
+    genderLabel: "طالب علم کی جنس",
+    cityLabel: "شہر",
+    cityPlaceholder: "آپ کا شہر",
+    whatLearn: "آپ کیا سیکھنا چاہتے ہیں؟",
+    selectedCourseLabel: "منتخب کورس",
+    levelLabel: "تعلیمی سطح",
+    selectCurrentLevel: "موجودہ تعلیمی سطح منتخب کریں",
+    teacherPref: "استاد کی ترجیح",
+    teacherGenderLabel: "استاد کی جنس",
+    classModeLabel: "کلاس کا طریقہ",
+    langLabel: "پسندیدہ تدریسی زبان",
+    scheduleLabel: "کلاس شیڈول",
+    preferredDaysLabel: "پسندیدہ کلاس کے دن *",
+    daysHelper: "ان دنوں کا انتخاب کریں جن میں آپ کلاسیں لینا پسند کریں گے۔",
+    preferredTimeLabel: "پسندیدہ وقت",
+    preferredDaysTextLabel: "پسندیدہ دن",
+    preferredDaysPlaceholder: "مثال: پیر، بدھ، جمعہ",
+    budgetLabel: "بجٹ",
+    monthlyBudgetLabel: "ماہانہ بجٹ",
+    budgetPlaceholder: "مثال: 2000",
+    budgetHelper: "اگر آپ لچکدار ہیں تو خالی چھوڑ دیں۔",
+    additionalLabel:"اضافی ضرورت",
+    additionalPlaceholder:"اگر آپ کچھ اور بتانا چاہیں تو لکھیں...",
+    errorPrefix:"خرابی:",
+    nextSteps:"آگے کیا ہوتا ہے؟",
+    next1:"✓ ہم آپ کی تعلیمی ضرورت کا جائزہ لیتے ہیں۔",
+    next2:"✓ ہم موزوں اساتذہ تلاش کرتے ہیں۔",
+    next3:"✓ ہم صحیح استاد منتخب کرنے میں آپ کی مدد کر سکتے ہیں۔",
+    saving:"ضرورت محفوظ ہو رہی ہے...",
+    submit:"تعلیمی ضرورت جمع کریں",
+    agreeNote:
+      "جمع کرنے سے، آپ اس بات سے متفق ہیں کہ UstaadHub آپ کی تعلیمی ضرورت کے سلسلے میں آپ سے رابطہ کر سکتا ہے۔",
+  },
+};
+
+export default function RequirementPage() {const [isUrdu, setIsUrdu] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const course = params.get("course");
+    const params = new URLSearchParams(window.location.search);
+    const course = params.get("course");
+    const lang = params.get("lang");
+    setIsUrdu(lang === "ur");
 
-  if (course) {
-    const decodedCourse = decodeURIComponent(course);
+    if (course) {
+      const decodedCourse = decodeURIComponent(course);
 
-    setSelectedCourse(decodedCourse);
-    setSelectedSubjects([decodedCourse]);
-  }
-}, []);
+      setSelectedCourse(decodedCourse);
+      setSelectedSubjects([decodedCourse]);
+    }
+  }, []);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   const [teacherGender, setTeacherGender] = useState("Any");
@@ -108,27 +233,27 @@ const weekDays = [
     setError("");
 
     if (selectedSubjects.length === 0) {
-      setError("Please select at least one subject.");
+      setError(isUrdu ? copy.ur.subjectRequired : copy.en.subjectRequired);
       return;
     }
 
     if (selectedLanguages.length === 0) {
-      setError("Please select at least one preferred language.");
+      setError(isUrdu ? copy.ur.languageRequired : copy.en.languageRequired);
       return;
     }
 
     if (!name.trim()) {
-      setError("Please enter student/parent name.");
+      setError(isUrdu ? copy.ur.nameRequired : copy.en.nameRequired);
       return;
     }
 
     if (!phone.trim()) {
-      setError("Please enter mobile number.");
+      setError(isUrdu ? copy.ur.phoneRequired : copy.en.phoneRequired);
       return;
     }
 
     if (!level) {
-      setError("Please select your current learning level.");
+      setError(isUrdu ? copy.ur.levelRequired : copy.en.levelRequired);
       return;
     }
 
@@ -207,7 +332,9 @@ console.log(
 
       if (insertError) {
         setError(
-          "Database error: " + insertError.message
+          isUrdu
+            ? copy.ur.dbError + insertError.message
+            : copy.en.dbError + insertError.message
         );
         return;
       }
@@ -229,7 +356,9 @@ setSubmitted(true);
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again."
+          : isUrdu
+            ? copy.ur.genericError
+            : copy.en.genericError
       );
     } finally {
       setLoading(false);
@@ -242,7 +371,11 @@ setSubmitted(true);
 
   if (submitted) {
     return (
-      <main className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
+      <main
+        dir={isUrdu ? "rtl" : undefined}
+        lang={isUrdu ? "ur" : undefined}
+        className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900"
+      >
         <div className="mx-auto max-w-4xl rounded-3xl border border-slate-300 bg-white p-10 text-center shadow-sm">
 
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-green-100 text-5xl text-green-600">
@@ -250,7 +383,7 @@ setSubmitted(true);
           </div>
 
           <h1 className="mt-8 text-4xl font-bold">
-            Requirement Submitted!
+            {isUrdu ? copy.ur.successTitle : copy.en.successTitle}
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">
@@ -262,17 +395,17 @@ setSubmitted(true);
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
 
             <a
-              href="/"
+              href={isUrdu ? "/ur" : "/"}
               className="rounded-xl border border-slate-400 px-8 py-4 font-semibold text-slate-800 hover:bg-slate-50"
             >
-              Go Home
+              {isUrdu ? copy.ur.goHome : copy.en.goHome}
             </a>
 
             <a
               href="/teachers"
               className="rounded-xl bg-blue-600 px-8 py-4 font-semibold text-white hover:bg-blue-700"
             >
-              Browse Teachers
+              {isUrdu ? copy.ur.browseTeachers : copy.en.browseTeachers}
             </a>
 
           </div>
@@ -286,24 +419,27 @@ setSubmitted(true);
   // ==========================================
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900">
+    <main
+      dir={isUrdu ? "rtl" : undefined}
+      lang={isUrdu ? "ur" : undefined}
+      className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900"
+    >
       <div className="mx-auto max-w-4xl">
 
         <div className="mb-8">
           <a
-            href="/"
+            href={isUrdu ? "/ur" : "/"}
             className="font-semibold text-blue-600"
           >
-            ← Back to Home
+            {isUrdu ? copy.ur.backToHome : copy.en.backToHome}
           </a>
 
           <h1 className="mt-6 text-4xl font-bold">
-            Find the Right Teacher
+            {isUrdu ? copy.ur.pageTitle : copy.en.pageTitle}
           </h1>
 
           <p className="mt-2 text-slate-600">
-            Tell us what you want to learn and your preferred
-            teacher.
+            {isUrdu ? copy.ur.pageDesc : copy.en.pageDesc}
           </p>
         </div>
 
@@ -317,14 +453,14 @@ setSubmitted(true);
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Student Information
-            </h2>
+            {isUrdu ? copy.ur.studentInfo : copy.en.studentInfo}
+          </h2>
 
             <div className="mt-6 grid gap-5 md:grid-cols-2">
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Student / Parent Name *
+                  {isUrdu ? copy.ur.nameLabel : copy.en.nameLabel}
                 </label>
 
                 <input
@@ -333,14 +469,14 @@ setSubmitted(true);
                   onChange={(e) =>
                     setName(e.target.value)
                   }
-                  placeholder="Enter name"
+                  placeholder={isUrdu ? copy.ur.namePlaceholder : copy.en.namePlaceholder}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Mobile Number *
+                  {isUrdu ? copy.ur.phoneLabel : copy.en.phoneLabel}
                 </label>
 
                 <input
@@ -349,14 +485,14 @@ setSubmitted(true);
                   onChange={(e) =>
                     setPhone(e.target.value)
                   }
-                  placeholder="Enter mobile number"
+                  placeholder={isUrdu ? copy.ur.phonePlaceholder : copy.en.phonePlaceholder}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Student Age
+                  {isUrdu ? copy.ur.ageLabel : copy.en.ageLabel}
                 </label>
 
                 <input
@@ -365,14 +501,14 @@ setSubmitted(true);
                   onChange={(e) =>
                     setAge(e.target.value)
                   }
-                  placeholder="Age"
+                  placeholder={isUrdu ? copy.ur.agePlaceholder : copy.en.agePlaceholder}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Student Gender
+                  {isUrdu ? copy.ur.genderLabel : copy.en.genderLabel}
                 </label>
 
                 <select
@@ -382,15 +518,17 @@ setSubmitted(true);
                   }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3"
                 >
-                  <option>Prefer not to say</option>
-                  <option>Male</option>
-                  <option>Female</option>
+                  <option>
+                        {isUrdu ? optionUrduLabels["Prefer not to say"] : "Prefer not to say"}
+                      </option>
+                  <option>{isUrdu ? optionUrduLabels["Male"] : "Male"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Female"] : "Female"}</option>
                 </select>
               </div>
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  City
+                  {isUrdu ? copy.ur.cityLabel : copy.en.cityLabel}
                 </label>
 
                 <input
@@ -399,7 +537,7 @@ setSubmitted(true);
                   onChange={(e) =>
                     setCity(e.target.value)
                   }
-                  placeholder="Your city"
+                  placeholder={isUrdu ? copy.ur.cityPlaceholder : copy.en.cityPlaceholder}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
@@ -415,12 +553,15 @@ setSubmitted(true);
               What do you want to learn?{selectedCourse && (
   <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
     <p className="text-sm font-semibold text-blue-600">
-      Selected Course
-    </p>
+            {isUrdu ? copy.ur.selectedCourseLabel : copy.en.selectedCourseLabel}
+          </p>
 
-    <p className="mt-1 text-lg font-bold text-blue-900">
-      ✓ {selectedCourse}
-    </p>
+          <p className="mt-1 text-lg font-bold text-blue-900">
+            ✓{" "}
+            {isUrdu
+              ? (courseUrduLabels[selectedCourse] ?? selectedCourse)
+              : selectedCourse}
+          </p>
   </div>
 )}
             </h2>
@@ -443,7 +584,9 @@ setSubmitted(true);
                   {selectedSubjects.includes(subject)
                     ? "✓ "
                     : ""}
-                  {subject}
+                  {isUrdu
+                    ? (requirementSubjectUrduLabels[subject] ?? subject)
+                    : subject}
                 </button>
               ))}
 
@@ -455,7 +598,7 @@ setSubmitted(true);
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Learning Level
+              {isUrdu ? copy.ur.levelLabel : copy.en.levelLabel}
             </h2>
 
             <select
@@ -466,13 +609,13 @@ setSubmitted(true);
               className="mt-5 w-full rounded-xl border border-slate-300 px-4 py-3"
             >
               <option value="">
-                Select current level
+                {isUrdu ? copy.ur.selectCurrentLevel : copy.en.selectCurrentLevel}
               </option>
-              <option>Beginner</option>
-              <option>Basic</option>
-              <option>Intermediate</option>
-              <option>Advanced</option>
-              <option>Not sure</option>
+              <option>{isUrdu ? optionUrduLabels["Beginner"] : "Beginner"}</option>
+              <option>{isUrdu ? optionUrduLabels["Basic"] : "Basic"}</option>
+              <option>{isUrdu ? optionUrduLabels["Intermediate"] : "Intermediate"}</option>
+              <option>{isUrdu ? optionUrduLabels["Advanced"] : "Advanced"}</option>
+              <option>{isUrdu ? optionUrduLabels["Not sure"] : "Not sure"}</option>
             </select>
           </section>
 
@@ -481,14 +624,14 @@ setSubmitted(true);
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Teacher Preference
+              {isUrdu ? copy.ur.teacherPref : copy.en.teacherPref}
             </h2>
 
             <div className="mt-5 grid gap-5 md:grid-cols-2">
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Teacher Gender
+                  {isUrdu ? copy.ur.teacherGenderLabel : copy.en.teacherGenderLabel}
                 </label>
 
                 <select
@@ -498,15 +641,15 @@ setSubmitted(true);
                   }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3"
                 >
-                  <option>Any</option>
-                  <option>Male</option>
-                  <option>Female</option>
+                  <option>{isUrdu ? optionUrduLabels["Any"] : "Any"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Male"] : "Male"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Female"] : "Female"}</option>
                 </select>
               </div>
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Class Mode
+                  {isUrdu ? copy.ur.classModeLabel : copy.en.classModeLabel}
                 </label>
 
                 <select
@@ -516,9 +659,9 @@ setSubmitted(true);
                   }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3"
                 >
-                  <option>Online</option>
-                  <option>Offline</option>
-                  <option>Both</option>
+                  <option>{isUrdu ? optionUrduLabels["Online"] : "Online"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Offline"] : "Offline"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Both"] : "Both"}</option>
                 </select>
               </div>
 
@@ -530,7 +673,7 @@ setSubmitted(true);
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Preferred Teaching Language
+              {isUrdu ? copy.ur.langLabel : copy.en.langLabel}
             </h2>
 
             <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -551,7 +694,7 @@ setSubmitted(true);
                   {selectedLanguages.includes(language)
                     ? "✓ "
                     : ""}
-                  {language}
+                  {isUrdu ? (languageUrduLabels[language] ?? language) : language}
                 </button>
               ))}
 
@@ -563,14 +706,14 @@ setSubmitted(true);
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Class Schedule
+              {isUrdu ? copy.ur.scheduleLabel : copy.en.scheduleLabel}
             </h2>
 
             <div className="mt-5 grid gap-5 md:grid-cols-2">
 
               <div className="md:col-span-2">
   <label className="mb-3 block font-semibold">
-    Preferred Class Days *
+    {isUrdu ? copy.ur.preferredDaysLabel : copy.en.preferredDaysLabel}
   </label>
 
   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
@@ -590,7 +733,7 @@ setSubmitted(true);
         >
           <span className="flex items-center justify-center gap-1.5">
             {selected && <span>✓</span>}
-            {day}
+            {isUrdu ? (weekdayUrduLabels[day] ?? day) : day}
           </span>
         </button>
       );
@@ -598,13 +741,13 @@ setSubmitted(true);
   </div>
 
   <p className="mt-3 text-sm text-slate-500">
-    Select the days you would prefer for your classes.
+    {isUrdu ? copy.ur.daysHelper : copy.en.daysHelper}
   </p>
 </div>
 
               <div>
                 <label className="mb-2 block font-semibold">
-                  Preferred Time
+                  {isUrdu ? copy.ur.preferredTimeLabel : copy.en.preferredTimeLabel}
                 </label>
 
                 <select
@@ -614,17 +757,17 @@ setSubmitted(true);
                   }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3"
                 >
-                  <option>Morning</option>
-                  <option>Afternoon</option>
-                  <option>Evening</option>
-                  <option>Night</option>
-                  <option>Flexible</option>
+                  <option>{isUrdu ? optionUrduLabels["Morning"] : "Morning"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Afternoon"] : "Afternoon"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Evening"] : "Evening"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Night"] : "Night"}</option>
+                  <option>{isUrdu ? optionUrduLabels["Flexible"] : "Flexible"}</option>
                 </select>
               </div>
 
               <div className="md:col-span-2">
                 <label className="mb-2 block font-semibold">
-                  Preferred Days
+                  {isUrdu ? copy.ur.preferredDaysTextLabel : copy.en.preferredDaysTextLabel}
                 </label>
 
                 <input
@@ -637,7 +780,7 @@ setPreferredDays(
     .map((day) => day.trim())
     .filter(Boolean)
 )                  }
-                  placeholder="Example: Monday, Wednesday, Friday"
+                  placeholder={isUrdu ? copy.ur.preferredDaysPlaceholder : copy.en.preferredDaysPlaceholder}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
@@ -650,13 +793,13 @@ setPreferredDays(
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Budget
+              {isUrdu ? copy.ur.budgetLabel : copy.en.budgetLabel}
             </h2>
 
             <div className="mt-5">
 
               <label className="mb-2 block font-semibold">
-                Monthly Budget
+                {isUrdu ? copy.ur.monthlyBudgetLabel : copy.en.monthlyBudgetLabel}
               </label>
 
               <input
@@ -665,12 +808,12 @@ setPreferredDays(
                 onChange={(e) =>
                   setMonthlyBudget(e.target.value)
                 }
-                placeholder="Example: 2000"
+                placeholder={isUrdu ? copy.ur.budgetPlaceholder : copy.en.budgetPlaceholder}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
               />
 
               <p className="mt-2 text-sm text-slate-500">
-                Leave blank if you are flexible.
+                {isUrdu ? copy.ur.budgetHelper : copy.en.budgetHelper}
               </p>
 
             </div>
@@ -681,7 +824,7 @@ setPreferredDays(
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <h2 className="text-2xl font-bold">
-              Additional Requirement
+              {isUrdu ? copy.ur.additionalLabel : copy.en.additionalLabel}
             </h2>
 
             <textarea
@@ -692,7 +835,7 @@ setPreferredDays(
                 )
               }
               rows={5}
-              placeholder="Tell us anything else we should know..."
+              placeholder={isUrdu ? copy.ur.additionalPlaceholder : copy.en.additionalPlaceholder}
               className="mt-5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
             />
           </section>
@@ -701,7 +844,7 @@ setPreferredDays(
 
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-              <strong>Error:</strong> {error}
+              <strong>{isUrdu ? copy.ur.errorPrefix : copy.en.errorPrefix}</strong> {error}
             </div>
           )}
 
@@ -710,13 +853,13 @@ setPreferredDays(
           <section className="rounded-2xl bg-blue-50 p-6">
 
             <h2 className="text-2xl font-bold text-blue-900">
-              What happens next?
+              {isUrdu ? copy.ur.nextSteps : copy.en.nextSteps}
             </h2>
 
             <div className="mt-4 space-y-3 text-blue-800">
-              <p>✓ We review your learning requirement.</p>
-              <p>✓ We look for suitable teachers.</p>
-              <p>✓ We can help you choose the right match.</p>
+              <p>{isUrdu ? copy.ur.next1 : copy.en.next1}</p>
+              <p>{isUrdu ? copy.ur.next2 : copy.en.next2}</p>
+              <p>{isUrdu ? copy.ur.next3 : copy.en.next3}</p>
             </div>
 
             <button
@@ -725,13 +868,12 @@ setPreferredDays(
               className="mt-8 w-full rounded-xl bg-blue-600 px-6 py-4 text-lg font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading
-                ? "Saving Requirement..."
-                : "Submit Learning Requirement"}
+                ? (isUrdu ? copy.ur.saving : copy.en.saving)
+                : (isUrdu ? copy.ur.submit : copy.en.submit)}
             </button>
 
             <p className="mt-4 text-center text-sm text-slate-600">
-              By submitting, you agree that UstaadHub may
-              contact you regarding your learning requirement.
+              {isUrdu ? copy.ur.agreeNote : copy.en.agreeNote}
             </p>
 
           </section>

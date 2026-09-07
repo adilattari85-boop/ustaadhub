@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import MatchedTeacherSection from "@/components/MatchedTeacherSection";
 
 type Requirement = {
   id: string;
@@ -113,6 +114,14 @@ export default function TeacherRequirementPage() {
         }
 
         setRequirement(requirementData as Requirement);
+
+        // Mark any notification for this requirement as read for the
+        // currently logged-in teacher (mirrors the admin detail route).
+        await supabase
+          .from("notifications")
+          .update({ is_read: true })
+          .eq("user_id", user.id)
+          .eq("related_requirement_id", requirementId);
       } catch (err) {
         console.error("Requirement load error:", err);
         setError("Unable to load this student requirement.");
@@ -124,15 +133,13 @@ export default function TeacherRequirementPage() {
     void loadRequirement();
   }, [requirementId, router]);
 
-  async function handleMatchAction(
-    newStatus: "accepted" | "rejected",
-  ) {
+  async function handleMatchAction(response: "accepted" | "rejected") {
     if (!match) {
       return;
     }
 
     const message =
-      newStatus === "accepted"
+      response === "accepted"
         ? "Are you sure you want to accept this student requirement?"
         : "Are you sure you want to reject this student requirement?";
 
@@ -144,30 +151,41 @@ export default function TeacherRequirementPage() {
     setError("");
 
     try {
-      const { error: updateError } = await supabase
-        .from("requirement_teacher_matches")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", match.id);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (updateError) {
-        throw updateError;
+      if (userError || !user) {
+        router.replace("/login?role=teacher");
+        return;
       }
 
-      setMatch((current) =>
-        current
-          ? {
-              ...current,
-              status: newStatus,
-            }
-          : current,
+      const { error: rpcError } = await supabase.rpc(
+        "teacher_respond_to_requirement",
+        {
+          p_requirement_id: match.requirement_id,
+          p_response: response,
+        },
       );
+
+      if (rpcError) {
+        throw rpcError;
+      }
+
+      alert(
+        response === "accepted"
+          ? "Requirement accepted successfully."
+          : "Requirement rejected.",
+      );
+
+      router.push("/teacher/dashboard");
     } catch (err) {
-      console.error("Match update error:", err);
+      console.error("Requirement response error:", err);
       setError(
-        "Unable to update this requirement. Please try again.",
+        err instanceof Error
+          ? err.message
+          : "Unable to update this requirement. Please try again.",
       );
     } finally {
       setActionLoading(false);
@@ -359,6 +377,8 @@ export default function TeacherRequirementPage() {
               </p>
             </div>
           </div>
+
+          <MatchedTeacherSection requirementId={requirement.id} />
 
           {/* Decision Area */}
           <div className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">

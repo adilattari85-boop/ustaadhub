@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import MatchedTeacherSection from "@/components/MatchedTeacherSection";
 
 type TeacherProfile = {
   id: string;
@@ -102,6 +103,23 @@ if (error) {
 
 setProfile((data as TeacherProfile | null) ?? null);
 
+// Fetch the teacher's notifications (e.g. teacher_match) for the bell dropdown.
+const { data: notificationData, error: notificationError } = await supabase
+  .from("notifications")
+  .select(
+    "id, title, message, type, related_requirement_id, related_teacher_id, is_read, created_at",
+  )
+  .eq("user_id", user.id)
+  .order("created_at", { ascending: false })
+  .limit(20);
+
+if (notificationError) {
+  console.error("Notification load error:", notificationError);
+  setNotifications([]);
+} else {
+  setNotifications((notificationData || []) as Notification[]);
+}
+
 if (data?.id) {
   const { data: matchData, error: matchError } = await supabase
     .from("requirement_teacher_matches")
@@ -156,6 +174,7 @@ if (matchError) {
       } finally {
         setProfileLoading(false);
         setLoading(false);
+        setNotificationLoading(false);
       }
     }
 
@@ -532,7 +551,7 @@ const activeClasses = 0;
           {/* Welcome + Profile Photo */}
           <div className="rounded-2xl border bg-white p-8 shadow-sm">
             <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 order-2 md:order-1">
                 <p className="font-semibold text-blue-600">
                   TEACHER DASHBOARD
                 </p>
@@ -631,7 +650,7 @@ const activeClasses = 0;
               </div>
 
               {/* Profile Photo */}
-              <div className="flex w-full flex-col items-center md:w-48">
+              <div className="flex w-full flex-col items-center order-1 md:order-2 md:w-48">
                 <div className="relative h-32 w-32 overflow-hidden rounded-full border-4 border-slate-100 bg-slate-100 shadow-sm">
                   {profile?.profile_photo_url ? (
                     <img
@@ -906,6 +925,8 @@ const activeClasses = 0;
           </p>
         </div>
       )}
+
+      <MatchedTeacherSection requirementId={selectedRequirement.id} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
         <button
