@@ -149,9 +149,7 @@ function LoginForm() {
                   <button
                     type="button"
                     className="text-sm font-medium text-blue-600 hover:underline"
-                    onClick={() =>
-                      alert("Password reset will be added later.")
-                    }
+                    onClick={() => router.push("/forgot-password")}
                   >
                     Forgot password?
                   </button>
