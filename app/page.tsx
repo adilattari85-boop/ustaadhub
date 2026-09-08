@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import HeroCarousel from "@/components/HeroCarousel";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -39,6 +40,31 @@ function formatFee(value: number | null, period: "week" | "month") {
 
   return `₹${value.toLocaleString("en-IN")}/${period}`;
 }
+
+// Hero banner slides — 5 uploaded Gemini banner images (1440×720).
+// The carousel autoplays every 4.5s with fade, arrows, dots and pause-on-hover.
+const heroSlides = [
+  {
+    src: "/hero-1.png",
+    alt: "UstaadHub – find the right teacher for Quran, Islamic studies, Arabic and more",
+  },
+  {
+    src: "/hero-2.png",
+    alt: "UstaadHub – personalised one-to-one online classes with experienced teachers",
+  },
+  {
+    src: "/hero-3.png",
+    alt: "UstaadHub – learn Quran, Islamic Studies, Arabic and languages online",
+  },
+  {
+    src: "/hero-4.png",
+    alt: "UstaadHub – connect with trusted, verified teachers",
+  },
+  {
+    src: "/hero-5.png",
+    alt: "UstaadHub – flexible timings and personalised learning",
+  },
+];
 
 const copy = {
   en: {
@@ -360,43 +386,48 @@ function selectCourse(course: string) {
     <main className="min-h-screen bg-white text-gray-900">
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <a href="#" className="text-2xl font-bold text-blue-700">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5 sm:py-4">
+          <a href="#" className="whitespace-nowrap text-lg font-bold text-blue-700 sm:text-2xl">
             UstaadHub
           </a>
 
           <div className="hidden items-center gap-8 md:flex">
-            <a href="#teachers" className="text-gray-700 hover:text-blue-700">
+            <a href="#teachers" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
               {t.findTeachers}
             </a>
-            <a href="#subjects" className="text-gray-700 hover:text-blue-700">
+            <a href="#subjects" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
               {t.subjects}
             </a>
-            <a href="#how" className="text-gray-700 hover:text-blue-700">
+            <a href="#how" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
               {t.howItWorks}
             </a>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
   <LanguageSwitcher />
 
           <a
     href="/login"
-              className="rounded-lg px-4 py-2 font-medium hover:bg-gray-100"
+              className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-gray-100 sm:px-4 sm:py-2 sm:text-base"
             >
               {t.login}
             </a>
 
             <a
               href="/register"
-              className="rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800"
+              className="whitespace-nowrap rounded-lg bg-blue-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-800 sm:px-5 sm:py-2.5 sm:text-base"
             >
               {t.joinAsTeacher}
             </a>
           </div>
         </div>
       </nav>
- <section className="overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+ <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        {/* Hero banner carousel — full-width 2:1 (1440×720) banner shown clearly, no white overlay */}
+        <div className="relative w-full overflow-hidden aspect-[2/1]">
+          <HeroCarousel slides={heroSlides} autoplayInterval={4500} />
+        </div>
+
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:grid-cols-2 md:items-center md:py-28">
       {/* HERO */}
   <div className={isUrdu ? "min-w-0" : undefined}>

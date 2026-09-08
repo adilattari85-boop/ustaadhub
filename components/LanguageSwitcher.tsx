@@ -10,7 +10,7 @@ export default function LanguageSwitcher() {
   return (
     <Link
       href={isUrdu ? "/" : "/ur"}
-      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-blue-300 hover:text-blue-700"
+      className="whitespace-nowrap rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm font-medium text-gray-700 transition hover:border-blue-300 hover:text-blue-700 sm:px-3 sm:py-2"
     >
       {isUrdu ? "English" : "اردو"}
     </Link>
