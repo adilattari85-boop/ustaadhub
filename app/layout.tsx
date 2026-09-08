@@ -16,25 +16,42 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.ustaadhub.in"),
 
-  title: "UstaadHub – Find the Right Teacher",
+  title: {
+    default:
+      "UstaadHub – Find Online Teachers for Quran, Arabic, Islamic Studies & More",
+    template: "%s | UstaadHub",
+  },
 
   description:
-    "UstaadHub helps students find quality teachers and tutors for better learning.",
+    "Find trusted online teachers for Quran, Islamic Studies, Arabic, Urdu, languages and more. Learn through personalised one-to-one online classes with experienced teachers.",
 
   keywords: [
-    "UstaadHub",
-    "teachers",
-    "tutors",
-    "home tutors",
     "online teachers",
-    "find a teacher",
+    "online tutor",
+    "find a teacher online",
+    "online learning",
+    "online Quran classes",
+    "Quran teacher online",
+    "learn Quran online",
+    "online Quran tutor",
+    "Islamic studies teacher online",
+    "Arabic teacher online",
+    "Urdu teacher online",
+    "one to one online classes",
+    "online Islamic teacher",
+    "Quran classes for kids online",
   ],
 
+  alternates: {
+    canonical: "https://www.ustaadhub.in",
+  },
+
   openGraph: {
-    title: "UstaadHub – Find the Right Teacher",
+    title:
+      "UstaadHub – Find Online Teachers for Quran, Arabic, Islamic Studies & More",
 
     description:
-      "Connect with quality teachers and discover better learning.",
+      "Find trusted online teachers for Quran, Islamic Studies, Arabic, Urdu, languages and more. Learn through personalised one-to-one online classes with experienced teachers.",
 
     siteName: "UstaadHub",
 
@@ -55,12 +72,18 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
 
-    title: "UstaadHub – Find the Right Teacher",
+    title:
+      "UstaadHub – Find Online Teachers for Quran, Arabic, Islamic Studies & More",
 
     description:
-      "Connect with quality teachers and discover better learning.",
+      "Learn through personalised one-to-one online classes with experienced teachers.",
 
     images: ["/og-image.png"],
+  },
+
+  robots: {
+    index: true,
+    follow: true,
   },
 
   icons: {

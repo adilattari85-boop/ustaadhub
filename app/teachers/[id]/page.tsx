@@ -114,6 +114,21 @@ export default function TeacherProfilePage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
+      {teacher && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              name: teacher.full_name,
+              description: teacher.bio || undefined,
+              url: `${window.location.origin}/teachers/${teacher.id}`,
+              knowsAbout: subjects.length ? subjects : undefined,
+            }),
+          }}
+        />
+      )}
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <Link href="/" className="text-3xl font-bold text-blue-600">

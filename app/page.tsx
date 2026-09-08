@@ -7,6 +7,23 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { courseUrduLabels } from "@/lib/urdu";
 
+// Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
+// organization/website info only. No invented ratings, reviews or offers.
+const homeSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "UstaadHub",
+  url: "https://www.ustaadhub.in",
+  description:
+    "Find trusted online teachers for Quran, Islamic Studies, Arabic, Urdu, languages and more. Learn through personalised one-to-one online classes with experienced teachers.",
+  inLanguage: ["en", "ur"],
+  publisher: {
+    "@type": "Organization",
+    name: "UstaadHub",
+    url: "https://www.ustaadhub.in",
+  },
+};
+
 type TeacherProfile = {
   id: string;
   full_name: string | null;
@@ -384,6 +401,10 @@ function selectCourse(course: string) {
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeSchema) }}
+      />
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5 sm:py-4">
