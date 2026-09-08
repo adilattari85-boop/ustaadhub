@@ -152,8 +152,8 @@ export default function MyStudentsPage() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link href="/teacher/dashboard" className="text-3xl font-bold text-blue-600">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-4 sm:px-6 sm:py-5">
+          <Link href="/teacher/dashboard" className="whitespace-nowrap text-2xl font-bold text-blue-600 sm:text-3xl">
             UstaadHub
           </Link>
 
@@ -163,14 +163,14 @@ export default function MyStudentsPage() {
               await supabase.auth.signOut();
               router.replace("/login?role=teacher");
             }}
-            className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+            className="whitespace-nowrap rounded-lg border bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50 sm:px-4 sm:py-2 sm:text-base"
           >
             Logout
           </button>
         </div>
       </header>
 
-      <section className="px-6 py-10">
+      <section className="px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8">
             <p className="font-semibold text-blue-600">TEACHER DASHBOARD</p>

@@ -434,15 +434,15 @@ const activeClasses = 0;
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-3xl font-bold text-blue-600">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-4 sm:px-6 sm:py-5">
+          <Link href="/" className="whitespace-nowrap text-2xl font-bold text-blue-600 sm:text-3xl">
             UstaadHub
           </Link>
           <div className="relative">
   <button
     type="button"
     onClick={() => setShowNotifications((current) => !current)}
-    className="relative rounded-lg border bg-white px-4 py-2 font-semibold transition hover:bg-slate-50"
+    className="relative whitespace-nowrap rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:bg-slate-50 sm:px-4 sm:py-2 sm:text-base"
   >
     🔔 Notifications
 
@@ -454,7 +454,7 @@ const activeClasses = 0;
   </button>
 
   {showNotifications && (
-    <div className="absolute right-0 z-50 mt-3 w-80 rounded-2xl border bg-white p-3 shadow-xl">
+    <div className="absolute right-0 z-50 mt-3 w-[min(calc(100vw_-_2rem),20rem)] rounded-2xl border bg-white p-3 shadow-xl sm:w-80">
       <div className="flex items-center justify-between border-b pb-3">
         <h3 className="font-bold">Notifications</h3>
         <span className="text-xs text-slate-500">
@@ -538,25 +538,25 @@ const activeClasses = 0;
 </div>
  <button
             onClick={handleLogout}
-            className="rounded-lg bg-red-600 px-5 py-2 font-semibold text-white transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+            className="whitespace-nowrap rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 sm:px-5 sm:py-2 sm:text-base"
           >
             Logout
           </button>
         </div>
       </header>
 
-      <section className="px-6 py-14">
+      <section className="px-4 py-14 sm:px-6">
         <div className="mx-auto max-w-6xl">
 
           {/* Welcome + Profile Photo */}
-          <div className="rounded-2xl border bg-white p-8 shadow-sm">
+          <div className="rounded-2xl border bg-white p-5 shadow-sm sm:p-8">
             <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0 flex-1 order-2 md:order-1">
                 <p className="font-semibold text-blue-600">
                   TEACHER DASHBOARD
                 </p>
 
-                <h1 className="mt-2 text-4xl font-bold">
+                <h1 className="mt-2 text-3xl font-bold sm:text-4xl">
                   Welcome{teacherName ? `, ${teacherName}` : ""}
                 </h1>
 
@@ -704,7 +704,7 @@ const activeClasses = 0;
           </div>
           
           {/* My Public Profile */}
-          <div className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
+          <div className="mt-8 rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-2xl font-bold text-slate-900">
                 My Public Profile
@@ -760,7 +760,7 @@ const activeClasses = 0;
                   </button>
                 </div>
 
-                <p className="text-sm text-slate-500">
+                <p className="break-all text-sm text-slate-500">
                   Public profile URL: {profileUrl}
                 </p>
 
