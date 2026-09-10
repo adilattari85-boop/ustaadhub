@@ -741,6 +741,14 @@ const activeClasses = 0;
                     View Profile
                   </Link>
 
+                  <Link
+                    href="/teacher/dashboard/profile/edit"
+                    aria-label="Edit public profile"
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  >
+                    Edit Profile
+                  </Link>
+
                   <button
                     type="button"
                     aria-label="Copy public profile link"
