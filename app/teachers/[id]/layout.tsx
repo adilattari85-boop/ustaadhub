@@ -3,6 +3,13 @@ import { supabase } from "@/lib/supabase";
 
 const baseUrl = "https://www.ustaadhub.in";
 
+function formatSubjectList(list: string[]): string {
+  if (list.length === 0) return "";
+  if (list.length === 1) return list[0];
+  if (list.length === 2) return `${list[0]} & ${list[1]}`;
+  return `${list.slice(0, -1).join(", ")} & ${list[list.length - 1]}`;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -25,18 +32,24 @@ export async function generateMetadata({
 
     if (teacher?.full_name) {
       const subjects = teacher.subjects?.slice(0, 4) ?? [];
-      const subjectText =
-        subjects.length > 0 ? subjects.join(", ") : "your chosen subject";
-      const title = `${teacher.full_name} – Online Teacher for ${subjects.join(" & ") || "Quran & more"}`;
+      const subjectText = formatSubjectList(subjects);
+      const title = subjectText
+        ? `${teacher.full_name} – Online ${subjectText} Teacher`
+        : `${teacher.full_name} – Online Teacher`;
+
+      const description =
+        subjects.length > 0
+          ? `Learn ${subjects.join(", ")} online with ${teacher.full_name} through personalised one-to-one online classes on UstaadHub.`
+          : `Learn online with ${teacher.full_name}, a verified teacher on UstaadHub, through personalised one-to-one online classes.`;
 
       return {
         title,
-        description: `Learn ${subjectText} online with ${teacher.full_name}, a verified teacher on UstaadHub.`,
+        description,
         alternates: { canonical: `${baseUrl}/teachers/${id}` },
         robots: { index: true, follow: true },
         openGraph: {
           title,
-          description: `Learn ${subjectText} online with ${teacher.full_name}, a verified teacher on UstaadHub.`,
+          description,
           siteName: "UstaadHub",
           url: `${baseUrl}/teachers/${id}`,
           type: "profile",
@@ -51,7 +64,7 @@ export async function generateMetadata({
         twitter: {
           card: "summary_large_image",
           title,
-          description: `Learn ${subjectText} online with ${teacher.full_name}.`,
+          description,
           images: ["/og-image.png"],
         },
       };

@@ -1,9 +1,7 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+
+const baseUrl = "https://www.ustaadhub.in";
 
 type TeacherProfile = {
   id: string;
@@ -17,6 +15,12 @@ type TeacherProfile = {
   fee_monthly: number | null;
   profile_photo_url: string | null;
   is_verified: boolean;
+};
+
+type RelatedTeacher = {
+  id: string;
+  full_name: string | null;
+  subjects: string[] | null;
 };
 
 const teacherColumns =
@@ -42,50 +46,27 @@ function formatFee(value: number | null, period: "week" | "month") {
   return `₹${value.toLocaleString("en-IN")}/${period}`;
 }
 
-export default function TeacherProfilePage() {
-  const params = useParams<{ id: string }>();
-  const [teacher, setTeacher] = useState<TeacherProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+export default async function TeacherProfilePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
-  useEffect(() => {
-    if (!params.id) return;
+  // Server-side fetch — only verified teachers are publicly visible/indexable.
+  let teacher: TeacherProfile | null = null;
 
-    let active = true;
+  try {
+    const { data } = await supabase
+      .from("teacher_profiles")
+      .select(teacherColumns)
+      .eq("id", id)
+      .eq("is_verified", true)
+      .maybeSingle();
 
-    async function loadTeacher() {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("teacher_profiles")
-        .select(teacherColumns)
-        .eq("id", params.id)
-        .eq("is_verified", true)
-        .single();
-
-      if (!active) return;
-
-      if (error || !data) {
-        setTeacher(null);
-      } else {
-        setTeacher(data as unknown as TeacherProfile);
-      }
-
-      setLoading(false);
-    }
-
-    void loadTeacher();
-
-    return () => {
-      active = false;
-    };
-  }, [params.id]);
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
-        <p className="text-lg font-semibold">Loading teacher profile...</p>
-      </main>
-    );
+    teacher = (data ?? null) as TeacherProfile | null;
+  } catch {
+    teacher = null;
   }
 
   if (!teacher) {
@@ -112,6 +93,25 @@ export default function TeacherProfilePage() {
   const weeklyFee = formatFee(teacher.fee_weekly, "week");
   const monthlyFee = formatFee(teacher.fee_monthly, "month");
 
+  // Other verified teachers sharing at least one subject (internal linking).
+  let relatedTeachers: RelatedTeacher[] = [];
+
+  if (subjects.length > 0) {
+    try {
+      const { data: relatedData } = await supabase
+        .from("teacher_profiles")
+        .select("id, full_name, subjects")
+        .eq("is_verified", true)
+        .neq("id", teacher.id)
+        .overlaps("subjects", subjects)
+        .limit(3);
+
+      relatedTeachers = (relatedData ?? []) as RelatedTeacher[];
+    } catch {
+      relatedTeachers = [];
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-50">
       {teacher && (
@@ -123,7 +123,7 @@ export default function TeacherProfilePage() {
               "@type": "Person",
               name: teacher.full_name,
               description: teacher.bio || undefined,
-              url: `${window.location.origin}/teachers/${teacher.id}`,
+              url: `${baseUrl}/teachers/${teacher.id}`,
               knowsAbout: subjects.length ? subjects : undefined,
             }),
           }}
@@ -250,16 +250,6 @@ export default function TeacherProfilePage() {
 
             <aside>
               <div className="sticky top-24 rounded-2xl border bg-white p-6 shadow-lg">
-                <p className="text-sm text-slate-500">Fees</p>
-
-                <div className="mt-2 space-y-2 text-2xl font-bold">
-                  {weeklyFee && <p>{weeklyFee}</p>}
-                  {monthlyFee && <p>{monthlyFee}</p>}
-                  {!weeklyFee && !monthlyFee && (
-                    <p className="text-lg">Not specified</p>
-                  )}
-                </div>
-
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">Teaching mode</span>
@@ -283,26 +273,51 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  disabled
-                  className="mt-7 w-full cursor-not-allowed rounded-xl bg-blue-600 py-4 font-bold text-white opacity-60"
+                <Link
+                  href={
+                    subjects.length > 0
+                      ? `/requirement?course=${encodeURIComponent(subjects[0])}`
+                      : "/requirement"
+                  }
+                  className="mt-3 block w-full rounded-xl border-2 border-blue-600 py-4 text-center font-bold text-blue-600 transition hover:bg-blue-50"
                 >
-                  Booking unavailable
-                </button>
-
-                <button
-                  type="button"
-                  disabled
-                  className="mt-3 w-full cursor-not-allowed rounded-xl border border-blue-600 py-4 font-bold text-blue-600 opacity-60"
-                >
-                  Messaging unavailable
-                </button>
+                  Request a Teacher
+                </Link>
               </div>
             </aside>
           </div>
         </div>
       </section>
+
+      {relatedTeachers.length > 0 && (
+        <section className="mx-auto max-w-6xl px-6 pb-14">
+          <h2 className="text-2xl font-bold text-slate-900">
+            Related Online Teachers
+          </h2>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            {relatedTeachers.map((related) => (
+              <Link
+                key={related.id}
+                href={`/teachers/${related.id}`}
+                className="rounded-2xl border bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+              >
+                <p className="font-semibold text-slate-900">
+                  {related.full_name || "Teacher"}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-600">
+                  {(related.subjects || []).join(", ")}
+                </p>
+
+                <p className="mt-3 text-sm font-semibold text-blue-600">
+                  View profile →
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-6 py-8 text-center text-sm text-slate-500">
