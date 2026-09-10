@@ -765,7 +765,7 @@ function selectCourse(course: string) {
 
                         <p className="mt-1 text-sm text-blue-700">
                           {(teacher.subjects || []).slice(0, 2).join(" & ") ||
-                            isUrdu ? t.subjectsNotSpecified : "Subjects not specified"}
+                            (isUrdu ? t.subjectsNotSpecified : "Subjects not specified")}
                         </p>
 
                         <span className="mt-2 inline-block rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
@@ -793,7 +793,7 @@ function selectCourse(course: string) {
                         <span className="text-gray-500">{t.languages}</span>
                         <span className="text-right font-semibold">
                           {(teacher.languages || []).join(", ") ||
-                            isUrdu ? t.notSpecified : "Not specified"}
+                            (isUrdu ? t.notSpecified : "Not specified")}
                         </span>
                       </div>
 
