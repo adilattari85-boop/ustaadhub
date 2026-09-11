@@ -211,6 +211,50 @@ async function connectTeacherToRequirement(
     return;
   }
 
+  // Notify the student whose learning_requirements row was matched.
+  // The recipient comes from requirement.user_id (loaded from the DB),
+  // never from a client-supplied value. Anonymous requirements with a
+  // null user_id are skipped. The match is already created — notification
+  // failures here must not roll back or undo the successful teacher match.
+  if (requirement.user_id) {
+    const { data: existingStudentNotification, error: studentCheckError } =
+      await supabase
+        .from("notifications")
+        .select("id")
+        .eq("user_id", requirement.user_id)
+        .eq("related_requirement_id", requirement.id)
+        .eq("related_teacher_id", teacher.id)
+        .eq("type", "student_match")
+        .limit(1);
+
+    if (studentCheckError) {
+      console.error("STUDENT NOTIFICATION CHECK ERROR:", studentCheckError);
+    } else if (!existingStudentNotification || existingStudentNotification.length === 0) {
+      const { error: studentNotifyError } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: requirement.user_id,
+          title: "A teacher has been assigned to your requirement",
+          message: `A teacher has been connected to your ${
+            requirement.subjects?.length
+              ? requirement.subjects.join(", ")
+              : "learning"
+          } requirement. They will review and respond soon.`,
+          type: "student_match",
+          related_requirement_id: requirement.id,
+          related_teacher_id: teacher.id,
+          is_read: false,
+        });
+
+      if (studentNotifyError) {
+        console.error("STUDENT NOTIFICATION ERROR:", studentNotifyError);
+        setError(
+          "Teacher connected, but the student could not be notified. Please try again later."
+        );
+      }
+    }
+  }
+
   setRequirements((current) =>
     current.map((item) =>
       item.id === requirement.id

@@ -69,6 +69,17 @@ type ClassSession = {
   teacher_name: string | null;
 };
 
+type StudentNotification = {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  related_requirement_id: string | null;
+  related_teacher_id: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
 function renderNavItem(item: (typeof navItems)[number], isActive = false) {
   const Icon = item.icon;
   const content = (
@@ -105,6 +116,8 @@ export default function StudentDashboard() {
   const [email, setEmail] = useState("");
   const [classSessions, setClassSessions] = useState<ClassSession[]>([]);
   const [classSessionsLoading, setClassSessionsLoading] = useState(true);
+  const [notifications, setNotifications] = useState<StudentNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -115,6 +128,34 @@ export default function StudentDashboard() {
         return;
       }
       setEmail(user.email || "");
+
+      // Fetch this student's notifications (e.g. teacher_match).
+      // A failure here must not prevent the dashboard from loading.
+      try {
+        const { data: notificationData, error: notificationError } =
+          await supabase
+            .from("notifications")
+            .select(
+              "id, title, message, type, related_requirement_id, related_teacher_id, is_read, created_at"
+            )
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+
+        if (notificationError) {
+          console.error("Notification load error:", notificationError);
+          setNotifications([]);
+        } else {
+          setNotifications(
+            (notificationData || []) as StudentNotification[]
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load notifications:", err);
+        setNotifications([]);
+      } finally {
+        setNotificationsLoading(false);
+      }
 
       // Fetch class sessions for this student
       try {
@@ -205,6 +246,63 @@ export default function StudentDashboard() {
     window.location.href = "/login";
   }
 
+  async function markNotificationRead(notificationId: string) {
+    // Optimistically flip the flag, then persist it scoped to the
+    // current authenticated user only. Never touch another user's row.
+    const target = notifications.find((n) => n.id === notificationId);
+    if (!target || target.is_read) return;
+
+    setNotifications((current) =>
+      current.map((n) =>
+        n.id === notificationId ? { ...n, is_read: true } : n
+      )
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Failed to mark notification as read:", error);
+      // Revert the optimistic update so the unread state stays visible.
+      setNotifications((current) =>
+        current.map((n) =>
+          n.id === notificationId ? { ...n, is_read: false } : n
+        )
+      );
+    }
+  }
+
+  function formatNotificationDate(iso: string): string {
+    try {
+      const date = new Date(iso);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      const time = date.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      if (isToday) return `Today at ${time}`;
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      if (date.toDateString() === yesterday.toDateString()) {
+        return `Yesterday at ${time}`;
+      }
+      return date.toLocaleDateString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  }
+
   const initials = getInitials(email);
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -290,6 +388,59 @@ export default function StudentDashboard() {
             </div>
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-200/30 blur-3xl" />
             <div className="absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-sky-200/30 blur-3xl" />
+          </section>
+          {/* NOTIFICATIONS */}
+          <section className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm sm:p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-blue-600">NOTIFICATIONS</p>
+                <h2 className="mt-1 text-2xl font-bold text-slate-800">Notifications</h2>
+              </div>
+              {notifications.some((n) => !n.is_read) && (
+                <span className="shrink-0 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                  {notifications.filter((n) => !n.is_read).length} new
+                </span>
+              )}
+            </div>
+
+            {notificationsLoading ? (
+              <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
+                Loading notifications...
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
+                No notifications yet
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-slate-100">
+                {notifications.map((notification) => (
+                  <li key={notification.id}>
+                    <button
+                      type="button"
+                      onClick={() => void markNotificationRead(notification.id)}
+                      className={`flex w-full items-start gap-3 rounded-xl px-4 py-3.5 text-left transition hover:bg-slate-50 ${
+                        notification.is_read ? "bg-white" : "bg-blue-50/40"
+                      }`}
+                    >
+                      {!notification.is_read && (
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-slate-900">
+                          {notification.title}
+                        </span>
+                        <span className="mt-0.5 block text-sm leading-5 text-slate-600">
+                          {notification.message}
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-400">
+                          {formatNotificationDate(notification.created_at)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
           {/* QUICK ACCESS CARDS (8 cards) */}
           <section>
