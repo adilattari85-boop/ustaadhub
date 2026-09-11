@@ -131,34 +131,37 @@ if (data?.id) {
   } else {
     const matches = matchData || [];
 
-    setStudentCount(
-      matches.filter((match) => match.status === "accepted").length
+    const acceptedMatches = matches.filter(
+      (match) => match.status === "accepted",
     );
+
+    setStudentCount(acceptedMatches.length);
 
     setRequestCount(
       matches.filter((match) => match.status === "connected").length
     );
 
-    setActiveClassCount(0);
+    // Count class sessions belonging to the teacher's accepted matches.
+    // RLS restricts class_sessions to sessions of the authenticated
+    // teacher's own accepted matches, so the count is inherently scoped.
+    if (acceptedMatches.length === 0) {
+      setActiveClassCount(0);
+    } else {
+      const acceptedMatchIds = acceptedMatches.map((match) => match.id);
+
+      const { count, error: sessionCountError } = await supabase
+        .from("class_sessions")
+        .select("id", { count: "exact", head: true })
+        .in("match_id", acceptedMatchIds);
+
+      if (sessionCountError) {
+        console.error("Active class count error:", sessionCountError);
+        setActiveClassCount(0);
+      } else {
+        setActiveClassCount(count ?? 0);
+      }
+    }
   }
-}
-          const { data: matchData, error: matchError } = await supabase
-  .from("requirement_teacher_matches")
-  .select("id, status")
-  .eq("teacher_id", user.id);
-
-if (matchError) {
-  console.error("Teacher matches load error:", matchError);
-} else {
-  const matches = matchData || [];
-
-  setStudentCount(
-    matches.filter((match) => match.status === "accepted").length
-  );
-
-  setRequestCount(
-    matches.filter((match) => match.status === "connected").length
-  );
 }
 
         if (error) {
@@ -600,7 +603,7 @@ const activeClasses = 0;
     </p>
 
     <Link
-      href="/teacher/dashboard/classes"
+      href="/teacher/dashboard/students"
       className="mt-4 inline-flex text-sm font-semibold text-blue-600 hover:text-blue-700"
     >
       Manage Classes →

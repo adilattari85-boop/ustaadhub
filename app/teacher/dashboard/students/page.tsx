@@ -458,6 +458,40 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
     }
   }
 
+  // Extracts readable Supabase/PostgREST error details. PostgrestError is a
+  // plain object (not an Error), so instanceof Error alone would discard the
+  // real message/code/details/hint. This never includes credentials.
+  function describeError(err: unknown): string {
+    if (typeof err === "object" && err !== null) {
+      const errObj = err as {
+        message?: unknown;
+        code?: unknown;
+        details?: unknown;
+        hint?: unknown;
+      };
+      const parts: string[] = [];
+      if (typeof errObj.code === "string" && errObj.code) {
+        parts.push(`code ${errObj.code}`);
+      }
+      if (typeof errObj.message === "string" && errObj.message) {
+        parts.push(errObj.message);
+      }
+      if (typeof errObj.hint === "string" && errObj.hint) {
+        parts.push(`hint: ${errObj.hint}`);
+      }
+      if (typeof errObj.details === "string" && errObj.details) {
+        parts.push(`details: ${errObj.details}`);
+      }
+      if (parts.length > 0) {
+        return parts.join(" — ");
+      }
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return "Failed to save class session.";
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -483,7 +517,8 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
       resetForm();
       await fetchSessions();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save class session.");
+      console.error("Class session save error:", err);
+      setError(describeError(err));
     } finally {
       setLoading(false);
     }
