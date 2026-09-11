@@ -25,6 +25,8 @@ type StudentRequirement = {
 
 type StudentRow = StudentRequirement & {
   matchStatus: Match["status"];
+  matchId: string;
+  teacherId: string;
 };
 
 export default function MyStudentsPage() {
@@ -69,7 +71,7 @@ export default function MyStudentsPage() {
 
         const { data: matches, error: matchError } = await supabase
           .from("requirement_teacher_matches")
-          .select("requirement_id, status")
+          .select("id, requirement_id, status")
           .eq("teacher_id", profile.id)
           .in("status", ["accepted", "connected"]);
 
@@ -79,7 +81,7 @@ export default function MyStudentsPage() {
 
         const activeMatches = (matches ?? []) as Pick<
           Match,
-          "requirement_id" | "status"
+          "id" | "requirement_id" | "status"
         >[];
 
         if (activeMatches.length === 0) {
@@ -115,7 +117,7 @@ export default function MyStudentsPage() {
           if (!requirement) {
             return;
           }
-          rows.push({ ...requirement, matchStatus: match.status });
+          rows.push({ ...requirement, matchStatus: match.status, matchId: match.id, teacherId: profile.id });
         });
 
         if (isMounted) {
@@ -275,7 +277,7 @@ export default function MyStudentsPage() {
                           </td>
 
                           <td className="px-5 py-5">
-                            <ClassConnectButton requirementId={student.id} />
+                            <ClassConnectButton requirementId={student.id} matchId={student.matchId} teacherId={student.teacherId} isAccepted={student.matchStatus === "accepted"} />
                           </td>
                         </tr>
                       ))}
@@ -331,7 +333,7 @@ export default function MyStudentsPage() {
                       </dl>
 
                       <div className="mt-4">
-                        <ClassConnectButton requirementId={student.id} />
+                        <ClassConnectButton requirementId={student.id} matchId={student.matchId} teacherId={student.teacherId} isAccepted={student.matchStatus === "accepted"} />
                       </div>
                     </div>
                   ))}
@@ -365,7 +367,7 @@ function Detail({
   );
 }
 
-function ClassConnectButton({ requirementId }: { requirementId: string }) {
+function ClassConnectButton({ requirementId, matchId, teacherId, isAccepted }: { requirementId: string; matchId: string; teacherId: string; isAccepted: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -377,43 +379,198 @@ function ClassConnectButton({ requirementId }: { requirementId: string }) {
       >
         📞 Class Connect
       </button>
-
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold">Class Connect</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Connect with this student to schedule and start their classes.
-            </p>
-            <p className="mt-3 text-xs text-slate-500">
-              Student contact details are shared privately once the connection
-              is confirmed.
-            </p>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Close
-              </button>
-              <Link
-                href={`/teacher/dashboard/requirements/${requirementId}`}
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                View Requirement
-              </Link>
-            </div>
-          </div>
-        </div>
+        <ClassSessionModal open={open} onClose={() => setOpen(false)} requirementId={requirementId} matchId={matchId} teacherId={teacherId} isAccepted={isAccepted} />
       )}
     </>
+  );
+}
+
+type ClassSession = {
+  id: string;
+  title: string;
+  join_link: string;
+  scheduled_at: string | null;
+  created_at: string;
+};
+
+function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, isAccepted }: {
+  open: boolean;
+  onClose: () => void;
+  requirementId: string;
+  matchId: string;
+  teacherId: string;
+  isAccepted: boolean;
+}) {
+  const [sessions, setSessions] = useState<ClassSession[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [title, setTitle] = useState("");
+  const [joinLink, setJoinLink] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && isAccepted) {
+      fetchSessions();
+    }
+  }, [open, isAccepted]);
+
+  async function fetchSessions() {
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("class_sessions")
+        .select("id, title, join_link, scheduled_at, created_at")
+        .eq("match_id", matchId)
+        .order("created_at", { ascending: false });
+      if (fetchError) throw fetchError;
+      setSessions((data ?? []) as ClassSession[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load class sessions.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function resetForm() {
+    setTitle("");
+    setJoinLink("");
+    setScheduledAt("");
+    setEditingId(null);
+  }
+
+  function startEdit(session: ClassSession) {
+    setEditingId(session.id);
+    setTitle(session.title);
+    setJoinLink(session.join_link);
+    setScheduledAt(session.scheduled_at ? session.scheduled_at.slice(0, 16) : "");
+  }
+
+  function isValidUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!title.trim()) { setError("Class title is required."); return; }
+    if (!isValidUrl(joinLink)) { setError("Please enter a valid http/https meeting URL."); return; }
+    setLoading(true);
+    try {
+      if (editingId) {
+        const { error: updateError } = await supabase
+          .from("class_sessions")
+          .update({ title: title.trim(), join_link: joinLink.trim(), scheduled_at: scheduledAt || null })
+          .eq("id", editingId);
+        if (updateError) throw updateError;
+        setSuccess("Class session updated.");
+      } else {
+        const { error: insertError } = await supabase
+          .from("class_sessions")
+          .insert({ match_id: matchId, requirement_id: requirementId, teacher_id: teacherId, title: title.trim(), join_link: joinLink.trim(), scheduled_at: scheduledAt || null });
+        if (insertError) throw insertError;
+        setSuccess("Class session created.");
+      }
+      resetForm();
+      await fetchSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save class session.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(sessionId: string) {
+    if (!confirm("Delete this class session?")) return;
+    setLoading(true);
+    setError("");
+    try {
+      const { error: deleteError } = await supabase.from("class_sessions").delete().eq("id", sessionId);
+      if (deleteError) throw deleteError;
+      setSuccess("Class session deleted.");
+      await fetchSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatScheduled(dateStr: string | null): string {
+    if (!dateStr) return "Not scheduled";
+    return new Date(dateStr).toLocaleString();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Class Sessions</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        </div>
+        {!isAccepted && (
+          <p className="mt-3 text-sm text-amber-600 bg-amber-50 rounded-lg p-3">You must accept this requirement before creating class sessions.</p>
+        )}
+        {isAccepted && (
+          <>
+            <form onSubmit={handleSave} className="mt-4 space-y-3 border-t pt-4">
+              <p className="text-sm font-semibold text-slate-700">{editingId ? "Edit Class" : "Create Class Link"}</p>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Class Title</label>
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Quran Recitation - Week 1" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Meeting URL</label>
+                <input type="url" value={joinLink} onChange={(e) => setJoinLink(e.target.value)} placeholder="https://meet.google.com/... or https://zoom.us/j/..." className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Scheduled Date/Time (optional)</label>
+                <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+              </div>
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              {success && <p className="text-sm text-emerald-600">{success}</p>}
+              <div className="flex gap-2">
+                <button type="submit" disabled={loading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{loading ? "Saving..." : editingId ? "Update" : "Create"}</button>
+                {editingId && <button type="button" onClick={resetForm} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel Edit</button>}
+              </div>
+            </form>
+            <div className="mt-4 border-t pt-4">
+              <p className="text-sm font-semibold text-slate-700 mb-2">Existing Classes ({sessions.length})</p>
+              {loading && sessions.length === 0 && <p className="text-sm text-slate-500">Loading...</p>}
+              {!loading && sessions.length === 0 && <p className="text-sm text-slate-500">No class sessions yet. Create one above.</p>}
+              <div className="space-y-2">
+                {sessions.map((session) => (
+                  <div key={session.id} className="rounded-lg border border-slate-200 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-900 truncate">{session.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{formatScheduled(session.scheduled_at)}</p>
+                      </div>
+                      <a href={session.join_link} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Open Class</a>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => startEdit(session)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                      <button type="button" onClick={() => handleDelete(session.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        <div className="mt-5 flex justify-end">
+          <button type="button" onClick={onClose} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Close</button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -165,6 +165,18 @@ export default function RequirementPage() {const [isUrdu, setIsUrdu] = useState(
       setSelectedCourse(decodedCourse);
       setSelectedSubjects([decodedCourse]);
     }
+
+    async function checkAuth() {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        window.location.href = "/login?redirect=/requirement";
+        return;
+      }
+    }
+    void checkAuth();
   }, []);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 

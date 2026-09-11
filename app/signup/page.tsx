@@ -1,9 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+import { useRouter, useSearchParams } from "next/navigation";
+
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
+
+  // Validate redirect to prevent open redirect attacks
+  const safeRedirect =
+    redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
+      ? redirectParam
+      : null;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -60,6 +79,13 @@ export default function SignupPage() {
       setMessage(
         "Account created successfully. Please check your email if verification is required."
       );
+
+      // If a safe redirect was provided, navigate there after a short delay
+      if (safeRedirect) {
+        setTimeout(() => {
+          router.push(safeRedirect);
+        }, 2000);
+      }
     }
   }
 

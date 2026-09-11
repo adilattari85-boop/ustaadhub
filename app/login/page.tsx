@@ -16,7 +16,14 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isTeacherLogin = searchParams.get("role") === "teacher";
+  const redirectParam = searchParams.get("redirect");
   const accountType = isTeacherLogin ? "teacher" : "student";
+
+  // Validate redirect to prevent open redirect attacks
+  const safeRedirect =
+    redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
+      ? redirectParam
+      : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,6 +75,12 @@ function LoginForm() {
     }
 
     const role = user.user_metadata?.role;
+
+    // If a safe redirect was provided, use it
+    if (safeRedirect) {
+      router.push(safeRedirect);
+      return;
+    }
 
     if (role === "teacher") {
       router.push("/teacher/dashboard");
