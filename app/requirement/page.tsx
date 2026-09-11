@@ -165,18 +165,6 @@ export default function RequirementPage() {const [isUrdu, setIsUrdu] = useState(
       setSelectedCourse(decodedCourse);
       setSelectedSubjects([decodedCourse]);
     }
-
-    async function checkAuth() {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user) {
-        window.location.href = "/login?redirect=/requirement";
-        return;
-      }
-    }
-    void checkAuth();
   }, []);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
@@ -213,6 +201,10 @@ const weekDays = [
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loginNeeded, setLoginNeeded] = useState(false);
 
   function toggleSubject(subject: string) {
     setSelectedSubjects((current) =>
@@ -269,28 +261,86 @@ const weekDays = [
       return;
     }
 
+    if (!email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       // ---------------------------------------
-      // 1. GET CURRENT LOGGED-IN USER
+      // 1. RESOLVE THE AUTHENTICATED STUDENT
       // ---------------------------------------
 
       const {
-        data: { user },
-        error: userError,
+        data: { user: currentUser },
+        error: currentUserError,
       } = await supabase.auth.getUser();
 
-      console.log("CURRENT USER:", user);
-      console.log("USER ERROR:", userError);
+      let requirementUserId: string | null = null;
 
+      if (currentUser && !currentUserError) {
+        // Already logged in: reuse the existing authenticated account.
+        requirementUserId = currentUser.id;
+      } else {
+        // New visitor: create the student auth account with the
+        // entered email + password.
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              data: {
+                role: "student",
+                name: name.trim(),
+                phone: phone.trim(),
+              },
+            },
+          });
+
+        if (signUpError) {
+          const alreadyExists = /already (registered|exists)/i.test(
+            signUpError.message || "",
+          );
+
+          if (alreadyExists) {
+            setError(
+              "An account already exists for this email. Please login to submit your requirement.",
+            );
+            setLoginNeeded(true);
+          } else {
+            setError(signUpError.message);
+          }
+          return;
+        }
+
+        if (!signUpData.session || !signUpData.user) {
+          setError(
+            "Account creation could not be completed. Please try again.",
+          );
+          return;
+        }
+
+        requirementUserId = signUpData.session.user.id;
+      }
 
       // ---------------------------------------
       // 2. PREPARE DATABASE DATA
       // ---------------------------------------
 
       const requirementData = {
-        user_id: user?.id ?? null,
+        user_id: requirementUserId,
 
         parent_student_name: name.trim(),
         mobile_number: phone.trim(),
@@ -356,12 +406,12 @@ console.log(
       // ---------------------------------------
       
       // ---------------------------------------
-      // 6. SUCCESS
+      // 6. SUCCESS — redirect to the student dashboard.
+      // The account was just created and the session was
+      // returned by signUp, so the student is authenticated.
       // ---------------------------------------
 
-    console.log("SUCCESS - DATABASE ROW CREATED");
-
-setSubmitted(true);
+      window.location.href = "/student/dashboard";
     } catch (err) {
       console.error("REQUIREMENT SUBMIT ERROR:", err);
 
@@ -550,6 +600,68 @@ setSubmitted(true);
                     setCity(e.target.value)
                   }
                   placeholder={isUrdu ? copy.ur.cityPlaceholder : copy.en.cityPlaceholder}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+
+            </div>
+          </section>
+
+          {/* CREATE STUDENT ACCOUNT */}
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+            <h2 className="text-2xl font-bold">
+              Create Student Account
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-600">
+              We will create a free student account so you can track your
+              requirement, your teacher, and your classes.
+            </p>
+
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+
+              <div>
+                <label className="mb-2 block font-semibold">
+                  Email
+                </label>
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block font-semibold">
+                  Create Password
+                </label>
+
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  autoComplete="new-password"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block font-semibold">
+                  Confirm Password
+                </label>
+
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  autoComplete="new-password"
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
@@ -857,6 +969,21 @@ setPreferredDays(
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
               <strong>{isUrdu ? copy.ur.errorPrefix : copy.en.errorPrefix}</strong> {error}
+            </div>
+          )}
+
+          {loginNeeded && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <a
+                href="/login?redirect=/requirement"
+                className="inline-block rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Login
+              </a>
+
+              <p className="mt-3 text-sm text-slate-600">
+                After logging in, return here to submit your requirement.
+              </p>
             </div>
           )}
 
