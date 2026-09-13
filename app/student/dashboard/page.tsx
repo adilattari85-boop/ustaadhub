@@ -80,6 +80,14 @@ type StudentNotification = {
   created_at: string;
 };
 
+type StudentAttendance = {
+  id: string;
+  attendance_date: string;
+  status: "present" | "absent" | "late";
+  created_at: string;
+  updated_at: string;
+};
+
 function renderNavItem(item: (typeof navItems)[number], isActive = false) {
   const Icon = item.icon;
   const content = (
@@ -118,6 +126,9 @@ export default function StudentDashboard() {
   const [classSessionsLoading, setClassSessionsLoading] = useState(true);
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -169,13 +180,37 @@ export default function StudentDashboard() {
 
         if (reqError) throw reqError;
 
+        const requirementIds = (requirements ?? []).map((r) => r.id);
+
+        // ATTENDANCE: load this student's attendance history in its own
+        // try/catch so a failure here never blocks the rest of the dashboard.
+        // Notes are teacher-internal and are never selected.
+        try {
+          if (requirementIds.length === 0) {
+            setAttendance([]);
+            setAttendanceLoading(false);
+          } else {
+            const { data, error } = await supabase
+              .from("attendance")
+              .select("id, attendance_date, status, created_at, updated_at")
+              .in("requirement_id", requirementIds)
+              .order("attendance_date", { ascending: false });
+            if (error) throw error;
+            setAttendance((data ?? []) as StudentAttendance[]);
+            setAttendanceLoading(false);
+          }
+        } catch (attendanceErr) {
+          console.error("Failed to load attendance:", attendanceErr);
+          setAttendanceError("Couldn't load your attendance right now.");
+          setAttendance([]);
+          setAttendanceLoading(false);
+        }
+
         if (!requirements || requirements.length === 0) {
           setClassSessions([]);
           setClassSessionsLoading(false);
           return;
         }
-
-        const requirementIds = requirements.map((r) => r.id);
 
         // Step 2: Get accepted matches for these requirements
         const { data: matches, error: matchError } = await supabase
@@ -300,6 +335,32 @@ export default function StudentDashboard() {
       });
     } catch {
       return "";
+    }
+  }
+
+  function attendanceStatusLabel(status: StudentAttendance["status"]): string {
+    if (status === "present") return "Present";
+    if (status === "absent") return "Absent";
+    return "Late";
+  }
+
+  function attendanceBadgeClass(status: StudentAttendance["status"]): string {
+    if (status === "present") return "bg-emerald-100 text-emerald-700";
+    if (status === "absent") return "bg-rose-100 text-rose-700";
+    return "bg-amber-100 text-amber-700";
+  }
+
+  function formatAttendanceDate(dateStr: string): string {
+    try {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      if (!year || !month || !day) return dateStr;
+      return new Date(year, month - 1, day).toLocaleDateString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return dateStr;
     }
   }
 
@@ -480,10 +541,31 @@ export default function StudentDashboard() {
                 <h2 className="mt-2 text-2xl font-bold text-slate-800">Attendance Reports</h2>
                 <p className="mt-2 text-slate-600">Track your attendance across all enrolled courses.</p>
               </div>
-              <div className="shrink-0">
-                <span className="text-5xl font-bold text-rose-200">—</span>
-              </div>
             </div>
+            {attendanceLoading ? (
+              <div className="mt-4 rounded-xl bg-white/70 p-4 text-center text-sm text-slate-500">
+                Loading attendance...
+              </div>
+            ) : attendanceError ? (
+              <p className="mt-4 text-sm font-medium text-rose-600">{attendanceError}</p>
+            ) : attendance.length === 0 ? (
+              <div className="mt-4 rounded-xl bg-white/70 p-4 text-center text-sm text-slate-500">
+                No attendance recorded yet.
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-rose-100">
+                {attendance.map((record) => (
+                  <li key={record.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="text-sm font-medium text-slate-700">
+                      {formatAttendanceDate(record.attendance_date)}
+                    </span>
+                    <span className={"shrink-0 rounded-full px-3 py-1 text-xs font-semibold " + attendanceBadgeClass(record.status)}>
+                      {attendanceStatusLabel(record.status)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
           {/* STATISTICS */}
           <section>

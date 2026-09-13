@@ -35,6 +35,7 @@ export default function MyStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [students, setStudents] = useState<StudentRow[]>([]);
+  const [attendanceTarget, setAttendanceTarget] = useState<StudentRow | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -227,6 +228,7 @@ export default function MyStudentsPage() {
                         <th className="px-5 py-4">Timing</th>
                         <th className="px-5 py-4">Status</th>
                         <th className="px-5 py-4">Connect</th>
+                        <th className="px-5 py-4">Attendance</th>
                       </tr>
                     </thead>
 
@@ -278,6 +280,9 @@ export default function MyStudentsPage() {
 
                           <td className="px-5 py-5">
                             <ClassConnectButton requirementId={student.id} matchId={student.matchId} teacherId={student.teacherId} isAccepted={student.matchStatus === "accepted"} />
+                          </td>
+                          <td className="px-5 py-5">
+                            <AttendanceButton student={student} onOpen={(s) => setAttendanceTarget(s)} />
                           </td>
                         </tr>
                       ))}
@@ -334,6 +339,7 @@ export default function MyStudentsPage() {
 
                       <div className="mt-4">
                         <ClassConnectButton requirementId={student.id} matchId={student.matchId} teacherId={student.teacherId} isAccepted={student.matchStatus === "accepted"} />
+                        <AttendanceButton student={student} onOpen={(s) => setAttendanceTarget(s)} />
                       </div>
                     </div>
                   ))}
@@ -343,6 +349,16 @@ export default function MyStudentsPage() {
           </div>
         </div>
       </section>
+
+      <AttendanceModal
+        open={attendanceTarget !== null}
+        onClose={() => setAttendanceTarget(null)}
+        matchId={attendanceTarget ? attendanceTarget.matchId : ""}
+        studentName={attendanceTarget ? attendanceTarget.parent_student_name : null}
+        requirementId={attendanceTarget ? attendanceTarget.id : ""}
+        teacherId={attendanceTarget ? attendanceTarget.teacherId : ""}
+        isAccepted={attendanceTarget ? attendanceTarget.matchStatus === 'accepted' : false}
+      />
     </main>
   );
 }
@@ -383,6 +399,24 @@ function ClassConnectButton({ requirementId, matchId, teacherId, isAccepted }: {
         <ClassSessionModal open={open} onClose={() => setOpen(false)} requirementId={requirementId} matchId={matchId} teacherId={teacherId} isAccepted={isAccepted} />
       )}
     </>
+  );
+}
+
+function AttendanceButton({
+  student,
+  onOpen,
+}: {
+  student: StudentRow;
+  onOpen: (student: StudentRow) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(student)}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-[0.98] sm:w-auto"
+    >
+      Attendance
+    </button>
   );
 }
 
@@ -604,6 +638,145 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
         )}
         <div className="mt-5 flex justify-end">
           <button type="button" onClick={onClose} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function todayLocalISODate(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "");
+  const day = String(now.getDate()).padStart(2, "");
+  return String(now.getFullYear()) + "-" + month + "-" + day;
+}
+
+function AttendanceModal({
+  open,
+  onClose,
+  matchId,
+  studentName,
+  requirementId,
+  teacherId,
+  isAccepted,
+}: {
+  open: boolean;
+  onClose: () => void;
+  matchId: string;
+  studentName: string | null;
+  requirementId: string;
+  teacherId: string;
+  isAccepted: boolean;
+}) {
+  const [attendanceDate, setAttendanceDate] = useState(todayLocalISODate());
+  const [status, setStatus] = useState<"present" | "absent" | "late">("present");
+  const [notes, setNotes] = useState("");
+  const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setAttendanceDate(todayLocalISODate());
+    setStatus("present");
+    setNotes("");
+    setNotice("");
+    setSaveError("");
+  }, [open]);
+
+  if (!open) return null;
+
+  async function handleSave() {
+    if (!isAccepted) {
+      setSaveError("Attendance can only be recorded for accepted students.");
+      return;
+    }
+    setSaving(true);
+    setSaveError("");
+    try {
+      const { error } = await supabase.rpc("save_teacher_attendance", {
+        p_match_id: matchId,
+        p_requirement_id: requirementId,
+        p_teacher_id: teacherId,
+        p_attendance_date: attendanceDate,
+        p_status: status,
+        p_notes: notes.trim() === "" ? null : notes,
+      });
+      if (error) {
+        setSaveError(error.message);
+        return;
+      }
+      setNotice("Attendance saved.");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Couldn't save attendance.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Attendance</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        </div>
+        <p className="mt-3 text-slate-700">{studentName ?? "This student"}</p>
+
+        <div className="mt-4 space-y-3 border-t pt-4">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Date</span>
+            <input
+              type="date"
+              value={attendanceDate}
+              onChange={(e) => setAttendanceDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
+
+          <div>
+            <span className="text-sm font-medium text-slate-700">Status</span>
+            <div className="mt-1 flex gap-2">
+              {(["present", "absent", "late"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={"rounded-lg border px-3 py-2 text-sm font-semibold transition " + (status === s ? (s === "present" ? "border-emerald-400 bg-emerald-50 text-emerald-700" : s === "absent" ? "border-rose-400 bg-rose-50 text-rose-700" : "border-amber-400 bg-amber-50 text-amber-700") : "border-slate-300 text-slate-600")}
+                >
+                  {s === "present" ? "Present" : s === "absent" ? "Absent" : "Late"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Notes</span>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Optional notes"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
+
+          {saveError && (
+            <p className="text-sm text-red-600">{saveError}</p>
+          )}
+
+          {notice && (
+            <p className="text-sm text-emerald-600">{notice}</p>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+              Save Attendance
+            </button>
+          </div>
         </div>
       </div>
     </div>

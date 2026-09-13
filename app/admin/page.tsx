@@ -28,6 +28,7 @@ type Requirement = {
   created_at: string;
   updated_at: string | null;
   status: RequirementStatus;
+  deleted_at: string | null;
 };
 type Teacher = {
   id: string;
@@ -50,7 +51,7 @@ const statuses: Array<"All" | RequirementStatus> = [
 ];
 
 const requirementColumns =
-  "id, user_id, parent_student_name, mobile_number, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, monthly_budget, city_location, additional_requirement, created_at, updated_at, status";
+  "id, user_id, parent_student_name, mobile_number, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, monthly_budget, city_location, additional_requirement, created_at, updated_at, status, deleted_at";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -65,6 +66,8 @@ export default function AdminPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
 const [showTeacherMatcher, setShowTeacherMatcher] = useState(false);
 const [teacherLoading, setTeacherLoading] = useState(false);
+  const [requirementActionId, setRequirementActionId] = useState<string | null>(null);
+  const [requirementActionError, setRequirementActionError] = useState("");
 const [connectingTeacherId, setConnectingTeacherId] =
   useState<string | null>(null);
 
@@ -304,6 +307,60 @@ async function connectTeacherToRequirement(
     );
     setSelectedRequirement(updatedRequirement);
     setStatusUpdating(false);
+  }
+
+  async function handleDeactivateRequirement(requirement: Requirement) {
+    if (!confirm(`Deactivate requirement for "${requirement.parent_student_name || "this student"}"?\n\nThis will hide it from active lists. Associated matches, class sessions, and attendance history will be preserved.`)) {
+      return;
+    }
+    setRequirementActionId(requirement.id);
+    setRequirementActionError("");
+    setError("");
+
+    const { error: rpcError } = await supabase.rpc(
+      "admin_deactivate_requirement",
+      { p_requirement_id: requirement.id },
+    );
+
+    if (rpcError) {
+      setRequirementActionError(rpcError.message || "Failed to deactivate requirement.");
+      setRequirementActionId(null);
+      return;
+    }
+
+    await loadRequirements();
+    if (selectedRequirement?.id === requirement.id) {
+      const updated = requirements.find((r) => r.id === requirement.id) ?? null;
+      setSelectedRequirement(updated);
+    }
+    setRequirementActionId(null);
+  }
+
+  async function handleRestoreRequirement(requirement: Requirement) {
+    if (!confirm(`Restore requirement for "${requirement.parent_student_name || "this student"}"?\n\nIt will reappear in active lists.`)) {
+      return;
+    }
+    setRequirementActionId(requirement.id);
+    setRequirementActionError("");
+    setError("");
+
+    const { error: rpcError } = await supabase.rpc(
+      "admin_restore_requirement",
+      { p_requirement_id: requirement.id },
+    );
+
+    if (rpcError) {
+      setRequirementActionError(rpcError.message || "Failed to restore requirement.");
+      setRequirementActionId(null);
+      return;
+    }
+
+    await loadRequirements();
+    if (selectedRequirement?.id === requirement.id) {
+      const updated = requirements.find((r) => r.id === requirement.id) ?? null;
+      setSelectedRequirement(updated);
+    }
+    setRequirementActionId(null);
   }
 
   async function handleLogout() {
@@ -618,13 +675,35 @@ async function connectTeacherToRequirement(
                     >
                       View
                     </button>
+                    {item.deleted_at === null ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeactivateRequirement(item)}
+                        disabled={requirementActionId === item.id}
+                        className="mt-2 w-full rounded-lg border border-orange-500 bg-white px-4 py-2.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {requirementActionId === item.id ? "Deactivating..." : "Deactivate"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleRestoreRequirement(item)}
+                        disabled={requirementActionId === item.id}
+                        className="mt-2 w-full rounded-lg border border-emerald-500 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {requirementActionId === item.id ? "Restoring..." : "Restore"}
+                      </button>
+                    )}
+                    {requirementActionId === item.id && requirementActionError && (
+                      <p className="mt-2 text-xs text-red-600">{requirementActionError}</p>
+                    )}
                   </div>
                 );
               })}
             </div>
 
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[1100px] text-left">
+              <table className="w-full min-w-[1300px] text-left">
                 <thead className="border-b bg-slate-50 text-sm">
                   <tr>
                     <th className="px-5 py-4">Student</th>
@@ -634,6 +713,7 @@ async function connectTeacherToRequirement(
                     <th className="px-5 py-4">Timing</th>
                     <th className="px-5 py-4">Budget</th>
                     <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4">State</th>
                     <th className="px-5 py-4">Action</th>
                   </tr>
                 </thead>
@@ -708,6 +788,39 @@ async function connectTeacherToRequirement(
                           </span>
                         </td>
 
+                        <td className="px-5 py-5">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              item.deleted_at === null
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {item.deleted_at === null ? "Active" : "Deactivated"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5">
+                          {item.deleted_at === null ? (
+                            <button
+                              onClick={() => void handleDeactivateRequirement(item)}
+                              disabled={requirementActionId === item.id}
+                              className="rounded-lg border border-orange-500 bg-white px-3 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {requirementActionId === item.id ? "Deactivating..." : "Deactivate"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void handleRestoreRequirement(item)}
+                              disabled={requirementActionId === item.id}
+                              className="rounded-lg border border-emerald-500 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {requirementActionId === item.id ? "Restoring..." : "Restore"}
+                            </button>
+                          )}
+                          {requirementActionId === item.id && requirementActionError && (
+                            <p className="mt-1 text-xs text-red-600">{requirementActionError}</p>
+                          )}
+                        </td>
                         <td className="px-5 py-5">
                           <button
                             onClick={() =>
@@ -928,7 +1041,11 @@ async function connectTeacherToRequirement(
               </select>
             </div>
 
-            <MatchedTeacherSection requirementId={selectedRequirement.id} />
+            {selectedRequirement.deleted_at !== null && (
+              <div className="mt-4 rounded-xl border border-slate-300 bg-slate-100 p-3 text-sm font-semibold text-slate-600">
+                This requirement is currently deactivated.
+              </div>
+            )}
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <button
@@ -937,16 +1054,32 @@ async function connectTeacherToRequirement(
               >
                 Close
               </button>
-
-             <button
-  onClick={() => {
-    setShowTeacherMatcher(true);
-    void loadVerifiedTeachers();
-  }}
-  className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
->
-  Match Teachers
-</button>
+              {selectedRequirement.deleted_at === null ? (
+                <button
+                  onClick={() => void handleDeactivateRequirement(selectedRequirement)}
+                  disabled={requirementActionId === selectedRequirement.id}
+                  className="flex-1 rounded-xl border border-orange-500 bg-white py-3 font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {requirementActionId === selectedRequirement.id ? "Deactivating..." : "Deactivate"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => void handleRestoreRequirement(selectedRequirement)}
+                  disabled={requirementActionId === selectedRequirement.id}
+                  className="flex-1 rounded-xl border border-emerald-500 bg-white py-3 font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {requirementActionId === selectedRequirement.id ? "Restoring..." : "Restore"}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowTeacherMatcher(true);
+                  void loadVerifiedTeachers();
+                }}
+                className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Match Teachers
+              </button>
             </div>
           </div>
         </div>
