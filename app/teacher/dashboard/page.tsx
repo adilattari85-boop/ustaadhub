@@ -649,6 +649,23 @@ const activeClasses = 0;
     </button>
   </div>
 
+{/* Group Classes */}
+  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+    <div className="text-3xl">📚</div>
+    <p className="mt-3 text-sm font-semibold text-slate-500">
+      Group Classes
+    </p>
+    <p className="mt-1 text-sm text-slate-600">
+      Create and manage your group classes
+    </p>
+
+    <Link
+      href="/teacher/dashboard/group-classes"
+      className="mt-4 inline-flex text-sm font-semibold text-blue-600 hover:text-blue-700"
+    >
+      Open Group Classes →
+    </Link>
+  </div>
 </div>
               </div>
 

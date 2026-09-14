@@ -19,6 +19,7 @@ import {
   FaGraduationCap,
   FaChevronDown,
   FaSearch,
+  FaBell,
 } from "react-icons/fa";
 
 // Navigation items for sidebar. Only "Home" has an existing route ("/student/dashboard").
@@ -67,6 +68,17 @@ type ClassSession = {
   join_link: string;
   scheduled_at: string | null;
   teacher_name: string | null;
+};
+
+type GroupClassSession = {
+  id: string;
+  group_class_id: string;
+  title: string;
+  join_link: string;
+  scheduled_at: string | null;
+  duration_minutes: number;
+  notes: string | null;
+  status: string;
 };
 
 type StudentNotification = {
@@ -122,10 +134,15 @@ function renderNavItem(item: (typeof navItems)[number], isActive = false) {
 
 export default function StudentDashboard() {
   const [email, setEmail] = useState("");
+  const [studentName, setStudentName] = useState("");
   const [classSessions, setClassSessions] = useState<ClassSession[]>([]);
   const [classSessionsLoading, setClassSessionsLoading] = useState(true);
+  const [groupClassSessions, setGroupClassSessions] = useState<GroupClassSession[]>([]);
+  const [groupClassSessionsLoading, setGroupClassSessionsLoading] = useState(true);
+  const [groupClassSessionsError, setGroupClassSessionsError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(true);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
@@ -175,10 +192,16 @@ export default function StudentDashboard() {
         // Step 1: Get all learning_requirements belonging to this user
         const { data: requirements, error: reqError } = await supabase
           .from("learning_requirements")
-          .select("id")
+          .select("id, parent_student_name")
           .eq("user_id", user.id);
 
         if (reqError) throw reqError;
+
+        const studentNameValue =
+          requirements
+            ?.map((r) => r.parent_student_name)
+            .find((name) => !!name) ?? "";
+        setStudentName(studentNameValue);
 
         const requirementIds = (requirements ?? []).map((r) => r.id);
 
@@ -272,9 +295,64 @@ export default function StudentDashboard() {
       } finally {
         setClassSessionsLoading(false);
       }
+
+      // Fetch group-class sessions for this student
+      try {
+        setGroupClassSessionsLoading(true);
+        setGroupClassSessionsError(null);
+
+        // Step 1: Get group classes where this student has a joined membership
+        const { data: memberships, error: membershipError } = await supabase
+          .from("group_class_members")
+          .select("group_class_id")
+          .eq("student_user_id", user.id)
+          .eq("status", "joined");
+
+        if (membershipError) throw membershipError;
+
+        const groupClassIds = (memberships ?? []).map((m) => m.group_class_id);
+
+        if (!memberships || memberships.length === 0) {
+          setGroupClassSessions([]);
+          setGroupClassSessionsLoading(false);
+          return;
+        }
+
+        // Step 2: Get sessions for these group classes
+        const { data: groupSessions, error: groupSessionsError } = await supabase
+          .from("group_class_sessions")
+          .select("id, group_class_id, title, join_link, scheduled_at, duration_minutes, notes, status")
+          .in("group_class_id", groupClassIds)
+          .is("deleted_at", null)
+          .order("scheduled_at", { ascending: true });
+
+        if (groupSessionsError) throw groupSessionsError;
+
+        setGroupClassSessions((groupSessions ?? []) as GroupClassSession[]);
+      } catch (err) {
+        console.error("Failed to fetch group class sessions:", err);
+        setGroupClassSessionsError("Couldn't load your group class sessions right now.");
+        setGroupClassSessions([]);
+      } finally {
+        setGroupClassSessionsLoading(false);
+      }
     }
     getUser();
   }, []);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    if (!showNotifications) return;
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      const bellContainer = document.getElementById("notification-bell-container");
+      if (bellContainer && !bellContainer.contains(target)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNotifications]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -385,6 +463,74 @@ export default function StudentDashboard() {
             </Link>
           </div>
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <div className="relative" id="notification-bell-container">
+              <button
+                type="button"
+                onClick={() => setShowNotifications((v) => !v)}
+                aria-label="Notifications"
+                aria-expanded={showNotifications}
+                aria-haspopup="true"
+                className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100"
+              >
+                <FaBell className="h-5 w-5" />
+                {notifications.some((n) => !n.is_read) && (
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {notifications.filter((n) => !n.is_read).length}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white shadow-xl sm:w-96">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                    <h3 className="text-sm font-bold text-slate-800">Notifications</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowNotifications(false)}
+                      className="text-slate-400 hover:text-slate-600"
+                      aria-label="Close notifications"
+                    >
+                      <FaTimes className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notificationsLoading ? (
+                      <div className="p-6 text-center text-sm text-slate-500">Loading notifications...</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-slate-500">No notifications yet</div>
+                    ) : (
+                      <ul className="divide-y divide-slate-100">
+                        {notifications.map((notification) => (
+                          <li key={notification.id}>
+                            <button
+                              type="button"
+                              onClick={() => void markNotificationRead(notification.id)}
+                              className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 ${
+                                notification.is_read ? "bg-white" : "bg-blue-50/40"
+                              }`}
+                            >
+                              {!notification.is_read && (
+                                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
+                              )}
+                              <span className="min-w-0 flex-1">
+                                <span className="block font-semibold text-slate-900">
+                                  {notification.title}
+                                </span>
+                                <span className="mt-0.5 block text-sm leading-5 text-slate-600">
+                                  {notification.message}
+                                </span>
+                                <span className="mt-1 block text-xs text-slate-400">
+                                  {formatNotificationDate(notification.created_at)}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="hidden min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 pr-1 pl-1 sm:flex sm:pr-3 sm:pl-3">
               <FaGraduationCap className="h-4 w-4 shrink-0 text-blue-600" />
               <span className="min-w-0">
@@ -443,65 +589,14 @@ export default function StudentDashboard() {
           <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-sky-50 to-white p-6 shadow-sm sm:p-8">
             <div className="relative z-10">
               <p className="font-semibold text-blue-600">STUDENT DASHBOARD</p>
-              <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Welcome to UstaadHub 🎓</h1>
+              <h1 className="mt-2 text-3xl font-bold sm:text-4xl">
+                Welcome, {studentName || "Student"}! 🎓
+              </h1>
               <p className="mt-4 text-lg text-slate-600">You are logged in as:</p>
               <p className="mt-1 break-all font-semibold text-slate-900">{email || "—"}</p>
             </div>
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-200/30 blur-3xl" />
             <div className="absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-sky-200/30 blur-3xl" />
-          </section>
-          {/* NOTIFICATIONS */}
-          <section className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm sm:p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-blue-600">NOTIFICATIONS</p>
-                <h2 className="mt-1 text-2xl font-bold text-slate-800">Notifications</h2>
-              </div>
-              {notifications.some((n) => !n.is_read) && (
-                <span className="shrink-0 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                  {notifications.filter((n) => !n.is_read).length} new
-                </span>
-              )}
-            </div>
-
-            {notificationsLoading ? (
-              <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
-                Loading notifications...
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
-                No notifications yet
-              </div>
-            ) : (
-              <ul className="mt-4 divide-y divide-slate-100">
-                {notifications.map((notification) => (
-                  <li key={notification.id}>
-                    <button
-                      type="button"
-                      onClick={() => void markNotificationRead(notification.id)}
-                      className={`flex w-full items-start gap-3 rounded-xl px-4 py-3.5 text-left transition hover:bg-slate-50 ${
-                        notification.is_read ? "bg-white" : "bg-blue-50/40"
-                      }`}
-                    >
-                      {!notification.is_read && (
-                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-slate-900">
-                          {notification.title}
-                        </span>
-                        <span className="mt-0.5 block text-sm leading-5 text-slate-600">
-                          {notification.message}
-                        </span>
-                        <span className="mt-1 block text-xs text-slate-400">
-                          {formatNotificationDate(notification.created_at)}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
           </section>
           {/* QUICK ACCESS CARDS (8 cards) */}
           <section>
@@ -648,6 +743,76 @@ export default function StudentDashboard() {
                 </tbody>
               </table>
             </div>
+          </section>
+          {/* GROUP CLASS SESSIONS */}
+          <section className="rounded-3xl border border-indigo-100 bg-white p-6 shadow-sm sm:p-8">
+            <div>
+              <p className="font-semibold text-indigo-600">GROUP CLASS SESSIONS</p>
+              <h2 className="mt-2 text-2xl font-bold text-slate-800">Group Class Sessions</h2>
+              <p className="mt-2 text-slate-600">Sessions for the group classes you have joined.</p>
+            </div>
+            {groupClassSessionsLoading ? (
+              <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
+                Loading group class sessions...
+              </div>
+            ) : groupClassSessionsError ? (
+              <p className="mt-4 text-sm font-medium text-rose-600">{groupClassSessionsError}</p>
+            ) : groupClassSessions.length === 0 ? (
+              <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
+                No group class sessions scheduled yet.
+              </div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                {groupClassSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-semibold text-slate-900">
+                          {session.title || "Group Session"}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {session.scheduled_at
+                            ? new Date(session.scheduled_at).toLocaleString()
+                            : "Not scheduled"}{" "}
+                          · {session.duration_minutes} min
+                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span
+                            className={
+                              session.status === "scheduled"
+                                ? "rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700"
+                                : session.status === "completed"
+                                  ? "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"
+                                  : "rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700"
+                            }
+                          >
+                            {session.status}
+                          </span>
+                        </div>
+                        {session.notes && (
+                          <p className="mt-2 text-sm text-slate-600">{session.notes}</p>
+                        )}
+                      </div>
+                      {session.join_link &&
+                        (session.join_link.startsWith("http://") ||
+                          session.join_link.startsWith("https://")) && (
+                          <a
+                            href={session.join_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                          >
+                            Join Session
+                          </a>
+                        )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
           {/* FOOTER */}
           <footer className="border-t pt-6 text-center text-sm text-slate-500">
