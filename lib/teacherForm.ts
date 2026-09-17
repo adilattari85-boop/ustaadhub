@@ -53,6 +53,7 @@ export type TeacherProfileFormValues = {
   name: string;
   email?: string;
   phone: string;
+  city: string;
   gender: string;
   qualification: string;
   experience: string;
@@ -103,6 +104,7 @@ export function validateTeacherProfileFields(
   const name = values.name.trim();
   const email = (values.email ?? "").trim();
   const phone = values.phone.trim();
+  const city = values.city.trim();
   const qualification = values.qualification.trim();
   const bio = values.bio.trim();
 
@@ -146,6 +148,12 @@ export function validateTeacherProfileFields(
 
   if (!GENDER_OPTIONS.includes(values.gender)) {
     return "Please select a valid gender option.";
+  }
+
+  // City / Location is mandatory (whitespace-only input counts as empty). The
+  // value is trimmed again by both callers before it is sent to the RPC.
+  if (!city) {
+    return "Please enter your city / location.";
   }
 
   if (!qualification) {

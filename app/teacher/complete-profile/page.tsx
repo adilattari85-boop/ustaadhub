@@ -64,6 +64,7 @@ export default function CompleteTeacherProfile() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("");
+  const [city, setCity] = useState("");
   const [qualification, setQualification] = useState("");
   const [experience, setExperience] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -142,6 +143,12 @@ export default function CompleteTeacherProfile() {
           ? metadata.qualification
           : "";
 
+      // City / Location was never part of the teacher registration metadata, so
+      // there is normally nothing to prefill here. It is read only if a value is
+      // ever present — an empty string is used otherwise, never an invented one.
+      const metadataCity =
+        typeof metadata.city === "string" ? metadata.city : "";
+
       // gender/qualification are read-only on this page and are read by the RPC
       // from Auth metadata, so missing or invalid registration data would produce
       // a form that can never be saved. Detect that before rendering the form.
@@ -206,6 +213,7 @@ export default function CompleteTeacherProfile() {
         setName(metadataName);
         setPhone(metadataPhone);
         setGender(metadataGender);
+        setCity(metadataCity);
         setQualification(metadataQualification);
         setScreen("form");
       }
@@ -278,6 +286,7 @@ export default function CompleteTeacherProfile() {
     const validationError = validateTeacherProfileFields({
       name,
       phone,
+      city,
       gender,
       qualification,
       experience,
@@ -357,6 +366,7 @@ export default function CompleteTeacherProfile() {
         {
           p_full_name: name.trim(),
           p_phone: phone.trim(),
+          p_city_location: city.trim(),
           p_bio: bio.trim(),
           p_subjects: selectedSubjects,
           p_experience: experience.trim(),
@@ -640,6 +650,25 @@ export default function CompleteTeacherProfile() {
                     From your original teacher registration and cannot be changed
                     here.
                   </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="complete-city"
+                    className="mb-2 block text-sm font-semibold text-gray-900"
+                  >
+                    City / Location *
+                  </label>
+
+                  <input
+                    id="complete-city"
+                    required
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    type="text"
+                    placeholder="Enter your city"
+                    className="w-full rounded-xl border px-4 py-3 outline-none focus:border-blue-500"
+                  />
                 </div>
               </div>
             </div>

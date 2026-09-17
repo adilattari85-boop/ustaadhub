@@ -21,6 +21,7 @@ export default function RegisterTeacher() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("");
+  const [city, setCity] = useState("");
   const [qualification, setQualification] = useState("");
   const [experience, setExperience] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -67,6 +68,7 @@ export default function RegisterTeacher() {
       name,
       email,
       phone,
+      city,
       gender,
       qualification,
       experience,
@@ -221,6 +223,7 @@ export default function RegisterTeacher() {
         await supabase.rpc("create_teacher_profile", {
           p_full_name: name.trim(),
           p_phone: phone.trim(),
+          p_city_location: city.trim(),
           p_bio: bio.trim(),
           p_subjects: selectedSubjects,
           p_experience: experience.trim(),
@@ -502,6 +505,25 @@ export default function RegisterTeacher() {
                     </option>
 
                   </select>
+
+                </div>
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
+                    City / Location *
+                  </label>
+
+                  <input
+                    required
+                    value={city}
+                    onChange={(e) =>
+                      setCity(e.target.value)
+                    }
+                    type="text"
+                    placeholder="Enter your city"
+                    className="w-full rounded-xl border px-4 py-3 outline-none focus:border-blue-500"
+                  />
 
                 </div>
 
