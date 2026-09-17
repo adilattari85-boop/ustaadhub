@@ -1,22 +1,20 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  TEACHER_LANGUAGES,
+  TEACHER_SUBJECTS,
+  parseFeeInput,
+  validateTeacherForm,
+} from "@/lib/teacherForm";
 
-const subjects = [
-  "Quran & Tajweed",
-  "Hifz-ul-Quran",
-  "Islamic Studies",
-  "Arabic",
-  "English",
-  "Hindi",
-  "Urdu",
-  "Maths",
-  "Science",
-  "Computer",
-];
+// The teacher option lists and validation rules live in lib/teacherForm.ts so the
+// completion flow (app/teacher/complete-profile) cannot drift from this form.
 
-const languages = ["Hindi", "Urdu", "English", "Arabic"];
+const subjects = TEACHER_SUBJECTS;
+
+const languages = TEACHER_LANGUAGES;
 
 export default function RegisterTeacher() {
   const [name, setName] = useState("");
@@ -36,6 +34,7 @@ export default function RegisterTeacher() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const submittingRef = useRef(false);
 
   function toggleItem(
     item: string,
@@ -52,89 +51,46 @@ export default function RegisterTeacher() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    // Prevent duplicate submissions while a request is in flight.
+    if (submittingRef.current) {
+      return;
+    }
+
     setError("");
+
+    // -------------------------
+    // 1. VALIDATION
+    // Runs before signUp() and before any network request.
+    // -------------------------
+
+    const validationError = validateTeacherForm({
+      name,
+      email,
+      phone,
+      gender,
+      qualification,
+      experience,
+      subjects: selectedSubjects,
+      languages: selectedLanguages,
+      feeWeekly,
+      feeMonthly,
+      bio,
+      password,
+      confirmPassword,
+    });
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setLoading(true);
+    submittingRef.current = true;
 
     try {
-      // =========================
-      // 1. VALIDATION
-      // =========================
-
-      if (!name.trim()) {
-        setError("Please enter your full name.");
-        setLoading(false);
-        return;
-      }
-
-      if (!email.trim()) {
-        setError("Please enter your email address.");
-        setLoading(false);
-        return;
-      }
-
-      if (!phone.trim()) {
-        setError("Please enter your phone number.");
-        setLoading(false);
-        return;
-      }
-
-      if (!gender) {
-        setError("Please select your gender.");
-        setLoading(false);
-        return;
-      }
-
-      if (!qualification.trim()) {
-        setError("Please enter your qualification.");
-        setLoading(false);
-        return;
-      }
-
-      if (!experience) {
-        setError("Please select your teaching experience.");
-        setLoading(false);
-        return;
-      }
-
-      if (selectedSubjects.length === 0) {
-        setError("Please select at least one subject.");
-        setLoading(false);
-        return;
-      }
-
-      if (selectedLanguages.length === 0) {
-        setError("Please select at least one language.");
-        setLoading(false);
-        return;
-      }
-
-      if (!feeWeekly && !feeMonthly) {
-        setError("Please enter either weekly fee or monthly fee.");
-        setLoading(false);
-        return;
-      }
-
-      if (!bio.trim()) {
-        setError("Please write a short introduction about yourself.");
-        setLoading(false);
-        return;
-      }
-
-      if (password.length < 8) {
-        setError("Password must be at least 8 characters.");
-        setLoading(false);
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        setLoading(false);
-        return;
-      }
-
-      // =========================
+      // -------------------------
       // 2. CREATE SUPABASE AUTH USER
-      // =========================
+      // -------------------------
 
       console.log("CREATING TEACHER AUTH ACCOUNT...");
 
@@ -267,11 +223,11 @@ export default function RegisterTeacher() {
           p_phone: phone.trim(),
           p_bio: bio.trim(),
           p_subjects: selectedSubjects,
-          p_experience: experience,
+          p_experience: experience.trim(),
           p_languages: selectedLanguages,
           p_teaching_mode: mode,
-          p_fee_weekly: feeWeekly ? Number(feeWeekly) : null,
-          p_fee_monthly: feeMonthly ? Number(feeMonthly) : null,
+          p_fee_weekly: parseFeeInput(feeWeekly).fee,
+          p_fee_monthly: parseFeeInput(feeMonthly).fee,
           p_profile_photo_url: null,
         });
 
@@ -304,6 +260,9 @@ export default function RegisterTeacher() {
       );
 
       setLoading(false);
+    } finally {
+      // Allow another attempt once the in-flight request settles.
+      submittingRef.current = false;
     }
   }
 

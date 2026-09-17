@@ -90,16 +90,16 @@ const copy = {
     howItWorks: "How It Works",
     login: "Login",
     joinAsTeacher: "Join as Teacher",
-    heroBadge: "✨ Learn from trusted teachers",
+    heroBadge: "✨ Verified 1:1 teachers",
     heroTitleA: "Find the right",
-    heroTitleC: "for you.",
+    heroTitleC: "for Quran, Arabic & Islamic Studies.",
     heroDescription:
       "Learn Quran, Islamic Studies, Arabic, languages and more from experienced teachers through personalised one-to-one online classes.",
     searchPlaceholder: "Search a course or subject...",
     matchingCourses: "Matching courses",
     popularCourses: "Popular courses",
     noMatchingCourse: "No matching course found.",
-    searchCourses: "Search Courses",
+    searchCourses: "Find Teachers",
     popular: "Popular:",
     postRequirement: "📝 Post Your Learning Requirement",
     tellUs:
@@ -161,16 +161,16 @@ const copy = {
     howItWorks: "یہ کیسے کام کرتا ہے؟",
     login: "لاگ اِن",
     joinAsTeacher: "بطور استاد شامل ہوں",
-    heroBadge: "✨ معتبر اساتذہ سے سیکھیں",
-    heroTitleA: "اپنے لیے صحیح",
-    heroTitleC: "تلاش کریں۔",
+    heroBadge: "✨ تصدیق شدہ 1:1 اساتذہ",
+    heroTitleA: "درست",
+    heroTitleC: "قرآن، عربی اور اسلامیات کے لئے تلاش کریں۔",
     heroDescription:
       "قرآن، اسلامیات، عربی، زبانیں اور مزید مضامین تجربہ کار اساتذہ سے ذاتی نوعیت کی ون آن ون آن لائن کلاسز کے ذریعے سیکھیں۔",
     searchPlaceholder: "کورس یا مضمون تلاش کریں...",
     matchingCourses: "مماثل کورسز",
     popularCourses:"مقبول کورسز",
     noMatchingCourse:"کوئی مماثل کورس نہیں ملا۔",
-    searchCourses:"کورسز تلاش کریں",
+    searchCourses:"اساتذہ تلاش کریں",
     popular:"مقبول:",
     postRequirement:"📝 اپنی تعلیمی ضرورت پوسٹ کریں",
     tellUs:
@@ -443,7 +443,7 @@ function selectCourse(course: string) {
           </div>
         </div>
       </nav>
- <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+ <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Hero banner carousel — full-width 2:1 (1440×720) banner shown clearly, no white overlay */}
         <div className="relative w-full overflow-hidden aspect-[2/1]">
           <HeroCarousel slides={heroSlides} autoplayInterval={4500} />

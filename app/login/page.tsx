@@ -3,6 +3,11 @@
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  TEACHER_COMPLETE_PROFILE_PATH,
+  fetchTeacherProfileId,
+  isTeacherCompleteProfilePath,
+} from "@/lib/teacherProfile";
 
 export default function LoginPage() {
   return (
@@ -75,6 +80,22 @@ function LoginForm() {
     }
 
     const role = user.user_metadata?.role;
+
+    // Teacher accounts without a teacher_profiles row are orphaned (for example
+    // when email confirmation interrupted the original registration). Send them
+    // to the completion flow so they can finish WITHOUT registering again.
+    if (role === "teacher" && !isTeacherCompleteProfilePath(safeRedirect)) {
+      const { profileId, error: profileError } =
+        await fetchTeacherProfileId(user.id);
+
+      // A lookup failure proves nothing about the row, so fall through to the
+      // existing redirect behavior instead of guessing.
+      if (!profileError && !profileId) {
+        router.push(TEACHER_COMPLETE_PROFILE_PATH);
+        return;
+      }
+    }
+
 
     // If a safe redirect was provided, use it
     if (safeRedirect) {

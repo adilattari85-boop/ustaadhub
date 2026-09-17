@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { TEACHER_COMPLETE_PROFILE_PATH } from "@/lib/teacherProfile";
 import MatchedTeacherSection from "@/components/MatchedTeacherSection";
 
 type TeacherProfile = {
@@ -99,6 +100,14 @@ setEmail(user.email || "");
 
 if (error) {
   throw error;
+}
+
+// An authenticated teacher with no teacher_profiles row has an incomplete
+// (orphaned) account. Redirect to the completion flow instead of showing the
+// "under verification" message, which only applies to an existing profile.
+if (!data) {
+  router.replace(TEACHER_COMPLETE_PROFILE_PATH);
+  return;
 }
 
 setProfile((data as TeacherProfile | null) ?? null);
@@ -743,7 +752,7 @@ const activeClasses = 0;
               </div>
             )}
 
-            {!profileError && !isVerified && (
+            {!profileError && profile && !isVerified && (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                 Your profile is under verification. Sharing will be
                 available after approval.
