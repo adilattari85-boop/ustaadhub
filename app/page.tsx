@@ -6,6 +6,18 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { courseUrduLabels } from "@/lib/urdu";
+import {
+  FACEBOOK_URL,
+  INSTAGRAM_URL,
+  WHATSAPP_URL,
+  YOUTUBE_URL,
+} from "@/lib/contact";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaWhatsapp,
+  FaYoutube,
+} from "react-icons/fa";
 
 // Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
 // organization/website info only. No invented ratings, reviews or offers.
@@ -150,10 +162,70 @@ const copy = {
       "Book a demo class and experience the right learning approach before you decide.",
     bookDemo: "🎓 Book a Demo Class",
     rightsReserved: "© 2026 UstaadHub. All rights reserved.",
-    about: "About",
-    contact: "Contact",
-    privacy: "Privacy",
-    terms: "Terms",
+    // About section
+    aboutUstaadHub: "ABOUT USTAADHUB",
+    aboutTitle: "About UstaadHub",
+    aboutDescription:
+      "UstaadHub connects students with suitable teachers for Quran, Arabic, Islamic Studies, languages and more.",
+    aboutStudentsTitle: "For students",
+    aboutStudents:
+      "Students can submit their learning requirement, and our admin team reviews it to help match them with a verified teacher.",
+    aboutTeachersTitle: "For teachers",
+    aboutTeachers:
+      "Teachers can create a profile and go through our verification and onboarding process before they start offering classes.",
+    aboutNotAutomatic:
+      "Teacher matching is assisted by our admin team — it is not fully automatic.",
+    // FAQ section
+    faq: "FAQ",
+    faqTitle: "Frequently Asked Questions",
+    faqQuestion1: "How can I request a teacher?",
+    faqAnswer1:
+      "Visit the Find Teachers page to browse available teachers, or submit your learning requirement. Our admin team will review your requirement and help match you with a suitable verified teacher.",
+    faqQuestion2: "How does teacher matching work?",
+    faqAnswer2:
+      "Matching is not fully automatic. After you submit a learning requirement, our admin team reviews it and assists in connecting you with a verified teacher whose expertise matches your needs.",
+    faqQuestion3: "Are teachers verified?",
+    faqAnswer3:
+      "Yes, UstaadHub features verified teachers who have completed the verification and onboarding process. You can view their profiles on the Find Teachers page.",
+    faqQuestion4: "What happens after I submit my requirement?",
+    faqAnswer4:
+      "After you submit your learning requirement, our admin team reviews it. If a suitable verified teacher is available, we assist in matching you. You may be contacted for further details.",
+    faqQuestion5: "How can I become a teacher?",
+    faqAnswer5:
+      "Teacher registration is available on the Register page. Teachers can create a profile and go through the verification and onboarding process before they can start offering classes.",
+    faqQuestion6: "How can I contact UstaadHub for help?",
+    faqAnswer6:
+      "You can reach out to UstaadHub support via WhatsApp or through the Contact section on this page. Our team is here to assist with any questions or issues.",
+    // Contact section
+    contactSupport: "CONTACT & SUPPORT",
+    contactTitle: "Contact & Support",
+    contactDescription:
+      "Have questions or need help? Our team is here to assist you.",
+    contactWhatsApp: "Chat with us on WhatsApp",
+    contactRequirement: "Post a Learning Requirement",
+    contactBrowseTeachers: "Browse Teachers",
+    contactNeedHelp: "Need help? Contact UstaadHub support.",
+    // Footer
+    footerExplore: "Explore",
+    footerCompany: "Company",
+    footerForTeachers: "For Teachers",
+    footerLegal: "Legal",
+    footerFollow: "Follow UstaadHub",
+    footerSocialYoutube: "UstaadHub on YouTube",
+    footerSocialFacebook: "UstaadHub on Facebook",
+    footerSocialInstagram: "UstaadHub on Instagram",
+    footerDescription:
+      "UstaadHub helps students find suitable, verified teachers for one-to-one online classes.",
+    footerFindTeachers: "Find Teachers",
+    footerRequestTeacher: "Request a Teacher",
+    footerHowItWorks: "How It Works",
+    footerSubjects: "Subjects",
+    footerAbout: "About",
+    footerFaq: "FAQ",
+    footerContact: "Contact",
+    footerBecomeTeacher: "Become a Teacher",
+    footerPrivacyPolicy: "Privacy Policy",
+    footerTermsConditions: "Terms & Conditions",
   },
   ur: {
     findTeachers: "اساتذہ تلاش کریں",
@@ -222,10 +294,70 @@ const copy = {
       "فیصلہ کرنے سے پہلے ڈیمو کلاس بک کریں اور سیکھنے کا صحیح طریقہ آزمائیں۔",
     bookDemo:"🎓 ڈیمو کلاس بک کریں",
     rightsReserved:"© 2026 UstaadHub۔ جملہ حقوق محفوظ ہیں۔",
-    about:"ہمارے بارے میں",
-    contact:"رابطہ",
-    privacy:"رازداری",
-    terms:"شرائط",
+    // About section
+    aboutUstaadHub:"ہمارے بارے میں",
+    aboutTitle:"UstaadHub کے بارے میں",
+    aboutDescription:
+      "UstaadHub طلباء کو قرآن، عربی، اسلامیات، زبانیں اور مزید مضامین کے لیے مناسب اساتذہ سے جوڑتا ہے۔",
+    aboutStudentsTitle:"طلباء کے لیے",
+    aboutStudents:
+      "طلباء اپنی تعلیمی ضرورت جمع کروا سکتے ہیں اور ہماری ایڈمن ٹیم اس کا جائزہ لے کر انہیں تصدیق شدہ استاد سے ملانے میں مدد کرتی ہے۔",
+    aboutTeachersTitle:"اساتذہ کے لیے",
+    aboutTeachers:
+      "اساتذہ اپنا پروفائل بنا سکتے ہیں اور تصدیق و آن بورڈنگ کے عمل سے گزر کر کلاسز پیش کر سکتے ہیں۔",
+    aboutNotAutomatic:
+      "استاد کی میچنگ ہماری ایڈمن ٹیم کی مدد سے ہوتی ہے — یہ مکمل طور پر خودکار نہیں ہے۔",
+    // FAQ section
+    faq:"عام سوالات",
+    faqTitle:"اکثر پوچھے جانے والے سوالات",
+    faqQuestion1:"میں استاد کی درخواست کیسے کر سکتا ہوں؟",
+    faqAnswer1:
+      "اساتذہ تلاش کریں صفحے پر دستیاب اساتذہ دیکھیں، یا اپنی تعلیمی ضرورت جمع کروائیں۔ ہماری ایڈمن ٹیم آپ کی ضرورت کا جائزہ لے کر آپ کو مناسب تصدیق شدہ استاد سے ملانے میں مدد کرے گی۔",
+    faqQuestion2:"استاد کی میچنگ کیسے ہوتی ہے؟",
+    faqAnswer2:
+      "میچنگ مکمل طور پر خودکار نہیں ہے۔ آپ کی تعلیمی ضرورت جمع ہونے کے بعد ہماری ایڈمن ٹیم اس کا جائزہ لیتی ہے اور آپ کو اس استاد سے ملانے میں مدد کرتی ہے جس کی مہارت آپ کی ضرورت کے مطابق ہو۔",
+    faqQuestion3:"کیا اساتذہ کی تصدیق ہوتی ہے؟",
+    faqAnswer3:
+      "جی ہاں، UstaadHub میں وہ اساتذہ شامل ہیں جنہوں نے تصدیق اور آن بورڈنگ کا عمل مکمل کیا ہے۔ آپ ان کے پروفائل اساتذہ تلاش کریں صفحے پر دیکھ سکتے ہیں۔",
+    faqQuestion4:"اپنی ضرورت جمع کروانے کے بعد کیا ہوتا ہے؟",
+    faqAnswer4:
+      "آپ کی تعلیمی ضرورت جمع ہونے کے بعد ہماری ایڈمن ٹیم اس کا جائزہ لیتی ہے۔ اگر مناسب تصدیق شدہ استاد دستیاب ہو تو ہم آپ کو اس سے ملانے میں مدد کرتے ہیں۔ مزید تفصیلات کے لیے آپ سے رابطہ کیا جا سکتا ہے۔",
+    faqQuestion5:"میں استاد کیسے بن سکتا ہوں؟",
+    faqAnswer5:
+      "استاد کی رجسٹریشن رجسٹر صفحے پر دستیاب ہے۔ اساتذہ پروفائل بنا سکتے ہیں اور کلاسز شروع کرنے سے پہلے تصدیق و آن بورڈنگ کے عمل سے گزرتے ہیں۔",
+    faqQuestion6:"مدد کے لیے UstaadHub سے کیسے رابطہ کروں؟",
+    faqAnswer6:
+      "آپ WhatsApp کے ذریعے یا اس صفحے کے رابطہ سیکشن سے UstaadHub کی معاونت حاصل کر سکتے ہیں۔ ہماری ٹیم کسی بھی سوال یا مسئلے میں مدد کے لیے موجود ہے۔",
+    // Contact section
+    contactSupport:"رابطہ",
+    contactTitle:"رابطہ اور معاونت",
+    contactDescription:
+      "کوئی سوال ہے یا مدد چاہیے؟ ہماری ٹیم آپ کی معاونت کے لیے موجود ہے۔",
+    contactWhatsApp:"WhatsApp پر ہم سے رابطہ کریں",
+    contactRequirement:"اپنی تعلیمی ضرورت جمع کروائیں",
+    contactBrowseTeachers:"اساتذہ دیکھیں",
+    contactNeedHelp:"مدد چاہیے؟ UstaadHub کی معاونت سے رابطہ کریں۔",
+    // Footer
+    footerExplore:"دریافت کریں",
+    footerCompany:"کمپنی",
+    footerForTeachers:"اساتذہ کے لیے",
+    footerLegal:"قانونی معلومات",
+    footerFollow:"UstaadHub کو فالو کریں",
+    footerSocialYoutube:"UstaadHub یوٹیوب پر",
+    footerSocialFacebook:"UstaadHub فیس بک پر",
+    footerSocialInstagram:"UstaadHub انسٹاگرام پر",
+    footerDescription:
+      "UstaadHub طلباء کو آن لائن ون ٹو ون کلاسز کے لیے مناسب اور تصدیق شدہ اساتذہ تلاش کرنے میں مدد کرتا ہے۔",
+    footerFindTeachers:"اساتذہ تلاش کریں",
+    footerRequestTeacher:"استاد کی درخواست",
+    footerHowItWorks:"یہ کیسے کام کرتا ہے؟",
+    footerSubjects:"مضامین",
+    footerAbout:"ہمارے بارے میں",
+    footerFaq:"عام سوالات",
+    footerContact:"رابطہ",
+    footerBecomeTeacher:"استاد بنیں",
+    footerPrivacyPolicy:"رازداری کی پالیسی",
+    footerTermsConditions:"شرائط و شرایط",
   },
 };
 
@@ -412,7 +544,7 @@ function selectCourse(course: string) {
             UstaadHub
           </a>
 
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="hidden items-center gap-6 md:flex lg:gap-8">
             <a href="#teachers" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
               {t.findTeachers}
             </a>
@@ -421,6 +553,15 @@ function selectCourse(course: string) {
             </a>
             <a href="#how" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
               {t.howItWorks}
+            </a>
+            <a href="#about" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+              {t.footerAbout}
+            </a>
+            <a href="#faq" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+              {t.footerFaq}
+            </a>
+            <a href="#contact" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+              {t.footerContact}
             </a>
           </div>
 
@@ -868,6 +1009,129 @@ function selectCourse(course: string) {
         </div>
       </section>
 
+      {/* ABOUT */}
+      <section id="about" className="bg-gray-50 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="text-center">
+            <p className="font-semibold text-blue-700">{t.aboutUstaadHub}</p>
+
+            <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+              {t.aboutTitle}
+            </h2>
+
+            <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+              {t.aboutDescription}
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8">
+              <h3 className="text-xl font-bold">{t.aboutStudentsTitle}</h3>
+
+              <p className="mt-3 leading-7 text-gray-600">
+                {t.aboutStudents}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8">
+              <h3 className="text-xl font-bold">{t.aboutTeachersTitle}</h3>
+
+              <p className="mt-3 leading-7 text-gray-600">
+                {t.aboutTeachers}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-8 rounded-2xl bg-blue-50 px-5 py-4 text-center text-sm leading-7 text-blue-800 sm:text-base">
+            {t.aboutNotAutomatic}
+          </p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-20">
+        <div className="mx-auto max-w-3xl px-5">
+          <div className="text-center">
+            <p className="font-semibold text-blue-700">{t.faq}</p>
+
+            <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+              {t.faqTitle}
+            </h2>
+          </div>
+
+          <div className="mt-10 space-y-3">
+            {[
+              [t.faqQuestion1, t.faqAnswer1],
+              [t.faqQuestion2, t.faqAnswer2],
+              [t.faqQuestion3, t.faqAnswer3],
+              [t.faqQuestion4, t.faqAnswer4],
+              [t.faqQuestion5, t.faqAnswer5],
+              [t.faqQuestion6, t.faqAnswer6],
+            ].map(([question, answer]) => (
+              <details
+                key={question}
+                className="group rounded-2xl border border-gray-200 bg-white px-5 py-4 transition open:border-blue-300 open:shadow-sm"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-start font-semibold text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+                  <span>{question}</span>
+
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-xl leading-none text-blue-700 transition-transform group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+
+                <p className="mt-3 leading-7 text-gray-600">{answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACT & SUPPORT */}
+      <section id="contact" className="bg-gray-50 py-20">
+        <div className="mx-auto max-w-3xl px-5 text-center">
+          <p className="font-semibold text-blue-700">{t.contactSupport}</p>
+
+          <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+            {t.contactTitle}
+          </h2>
+
+          <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+            {t.contactDescription}
+          </p>
+
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2"
+            >
+              {t.contactWhatsApp}
+            </a>
+
+            <Link
+              href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
+              className="inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+            >
+              {t.contactRequirement}
+            </Link>
+
+            <Link
+              href="/teachers"
+              className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-6 py-3.5 text-base font-semibold text-gray-800 transition hover:border-blue-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+            >
+              {t.contactBrowseTeachers}
+            </Link>
+          </div>
+
+          <p className="mt-5 text-sm text-gray-500">{t.contactNeedHelp}</p>
+        </div>
+      </section>
+
       <section className="mx-auto mt-16 max-w-7xl px-6 pb-16">
   <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-6 py-16 text-center shadow-xl md:px-12 md:py-20">
     {/* Decorative background */}
@@ -902,20 +1166,187 @@ function selectCourse(course: string) {
 </section>
 
       {/* FOOTER */}
-      <footer className="mt-10 border-t">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
-          <div>{t.rightsReserved}</div>
+      <footer className="mt-10 border-t bg-white">
+        <div className="mx-auto max-w-7xl px-5 py-12">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="lg:col-span-2">
+              <p className="text-xl font-bold text-blue-700">UstaadHub</p>
 
-          <div className="flex gap-6">
-            <span className="cursor-pointer hover:text-blue-700">{t.about}</span>
-            <span className="cursor-pointer hover:text-blue-700">
-              {t.contact}
-            </span>
-            <span className="cursor-pointer hover:text-blue-700">
-              {t.privacy}
-            </span>
-            <span className="cursor-pointer hover:text-blue-700">{t.terms}</span>
+              <p className="mt-3 max-w-xs text-sm leading-7 text-gray-500">
+                {t.footerDescription}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t.footerExplore}
+              </h3>
+
+              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+                <li>
+                  <Link href="/teachers" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerFindTeachers}
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
+                    className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  >
+                    {t.footerRequestTeacher}
+                  </Link>
+                </li>
+
+                <li>
+                  <a href="#how" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerHowItWorks}
+                  </a>
+                </li>
+
+                <li>
+                  <a href="#subjects" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerSubjects}
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t.footerCompany}
+              </h3>
+
+              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+                <li>
+                  <a href="#about" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerAbout}
+                  </a>
+                </li>
+
+                <li>
+                  <a href="#faq" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerFaq}
+                  </a>
+                </li>
+
+                <li>
+                  <a href="#contact" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerContact}
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t.footerForTeachers}
+              </h3>
+
+              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+                <li>
+                  <Link href="/register" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerBecomeTeacher}
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t.footerLegal}
+              </h3>
+
+              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+                <li>
+                  <Link href="/privacy" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerPrivacyPolicy}
+                  </Link>
+                </li>
+
+                <li>
+                  <Link href="/terms" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                    {t.footerTermsConditions}
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
+
+          <div className="mt-10 border-t pt-6">
+            <h3 className="text-sm font-semibold text-gray-900">
+              {t.footerFollow}
+            </h3>
+
+            {/* Real, existing UstaadHub channels only — WhatsApp, YouTube,
+                Facebook and Instagram. No placeholder links are added here. */}
+            <ul className="mt-4 flex flex-wrap items-center gap-3">
+              <li>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.contactWhatsApp}
+                  title={t.contactWhatsApp}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-green-600 hover:bg-green-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <FaWhatsapp aria-hidden="true" className="h-5 w-5" />
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={YOUTUBE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.footerSocialYoutube}
+                  title={t.footerSocialYoutube}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-red-600 hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <FaYoutube aria-hidden="true" className="h-5 w-5" />
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={FACEBOOK_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.footerSocialFacebook}
+                  title={t.footerSocialFacebook}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-blue-600 hover:bg-blue-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <FaFacebookF aria-hidden="true" className="h-5 w-5" />
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.footerSocialInstagram}
+                  title={t.footerSocialInstagram}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-pink-600 hover:bg-pink-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                  <FaInstagram aria-hidden="true" className="h-5 w-5" />
+                </a>
+              </li>
+            </ul>
+
+            <p className="mt-4 text-sm text-gray-500">
+              <a
+                href="#contact"
+                className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
+                {t.footerContact}
+              </a>
+            </p>
+          </div>
+
+          <p className="mt-8 border-t pt-6 text-sm text-gray-500">
+            {t.rightsReserved}
+          </p>
         </div>
       </footer>
     </main>

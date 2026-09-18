@@ -1,15 +1,12 @@
 "use client";
 
 import { FaWhatsapp } from "react-icons/fa";
+import { WHATSAPP_URL } from "@/lib/contact";
 
 export default function WhatsAppButton() {
-  const whatsappNumber = "918445245865";
-  const whatsappMessage = "Hello%20I%20want%20to%20know%20more%20about%20UstaadHub.";
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
-
   return (
     <a
-      href={whatsappUrl}
+      href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with UstaadHub on WhatsApp"
