@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { requestWelcomeEmail } from "@/lib/welcomeEmailClient";
 import {
   courseUrduLabels,
   languageUrduLabels,
@@ -333,6 +334,11 @@ const weekDays = [
         }
 
         requirementUserId = signUpData.session.user.id;
+
+        // A brand new student Auth account was just created by signUp() above
+        // (the already-logged-in branch above never reaches this line), so
+        // trigger the student welcome email. Non-blocking.
+        requestWelcomeEmail();
       }
 
       // ---------------------------------------

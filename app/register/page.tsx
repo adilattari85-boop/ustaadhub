@@ -2,6 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { requestWelcomeEmail } from "@/lib/welcomeEmailClient";
 import {
   TEACHER_LANGUAGES,
   TEACHER_SUBJECTS,
@@ -254,6 +255,11 @@ export default function RegisterTeacher() {
 
       setLoading(false);
       setSubmitted(true);
+
+      // The teacher Auth account AND the teacher_profiles row now exist, so
+      // trigger the teacher welcome email. Non-blocking: the success screen
+      // below is unchanged and email failures never reach the user.
+      requestWelcomeEmail();
 
     } catch (err) {
       console.error("REGISTRATION ERROR:", err);

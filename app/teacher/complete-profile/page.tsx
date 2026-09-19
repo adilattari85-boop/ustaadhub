@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { requestWelcomeEmail } from "@/lib/welcomeEmailClient";
 import { fetchTeacherProfileId } from "@/lib/teacherProfile";
 import {
   EXPERIENCE_LABELS,
@@ -398,6 +399,11 @@ export default function CompleteTeacherProfile() {
       }
 
       completed = true;
+      // The teacher_profiles row now exists — also for accounts whose original
+      // registration could not finish — so trigger the teacher welcome email.
+      // Non-blocking: the redirect below is unchanged.
+      requestWelcomeEmail();
+
       finishAndRedirect("done", 1500);
     } catch (err) {
       console.error("TEACHER PROFILE COMPLETION ERROR:", err);

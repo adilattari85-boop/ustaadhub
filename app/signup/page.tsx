@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { requestWelcomeEmail } from "@/lib/welcomeEmailClient";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -76,6 +77,11 @@ function SignupForm() {
     }
 
     if (data.user) {
+      // Supabase confirmed the signup, so the account exists: trigger the
+      // student welcome email. Non-blocking — the success message and the
+      // optional redirect below are unchanged, and email failures are never
+      // surfaced to the user.
+      requestWelcomeEmail();
       setMessage(
         "Account created successfully. Please check your email if verification is required."
       );
