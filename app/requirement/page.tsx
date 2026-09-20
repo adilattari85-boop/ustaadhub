@@ -3,6 +3,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { requestWelcomeEmail } from "@/lib/welcomeEmailClient";
+import RequirementPaymentStep from "@/components/RequirementPaymentStep";
+import {
+  DEFAULT_PAYMENT_SETTINGS,
+  type PaymentSettings,
+  type PaymentSettingsRow,
+} from "@/lib/payments/types";
 import {
   courseUrduLabels,
   languageUrduLabels,
@@ -150,6 +156,126 @@ const copy = {
       "جمع کرنے سے، آپ اس بات سے متفق ہیں کہ UstaadHub آپ کی تعلیمی ضرورت کے سلسلے میں آپ سے رابطہ کر سکتا ہے۔",
   },
 };
+// ---------------------------------------------------------------------------
+// Payment-flow session helpers
+// ---------------------------------------------------------------------------
+// The payment gateway is optional and admin-controlled. When it is OFF nothing
+// below changes the existing free submission flow: the only reads are the
+// public settings RPC and (after a successful insert) the redirect to the
+// dashboard.
+//
+// sessionStorage keeps two things for the duration of one browser tab:
+//   * the pending requirement id, so refreshing the page while the payment
+//     step is open resumes that payment instead of creating a duplicate
+//     requirement, and
+//   * the idempotency key sent with the insert, so a retried submit of the same
+//     form session is collapsed into a single requirement by the database
+//     (unique index on (user_id, idempotency_key)).
+const PENDING_REQUIREMENT_STORAGE_KEY = "ustaadhub_pending_requirement_id";
+const SUBMISSION_KEY_STORAGE_KEY = "ustaadhub_requirement_submission_key";
+
+function readSessionValue(key: string): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  try {
+    return window.sessionStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeSessionValue(key: string, value: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable (private mode): the flow still works, only the
+    // refresh protection is lost.
+  }
+}
+
+function clearSessionValue(key: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // Ignore: nothing to clean up.
+  }
+}
+
+function createSubmissionKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
+ * Asks the server to release an unpaid draft when the payment gateway has been
+ * switched OFF. Best effort: on any failure the local draft marker is still
+ * cleared, because the server refuses to release anything while the gateway is
+ * ON and an unreleased draft is never matchable.
+ */
+async function releasePendingRequirement(requirementId: string): Promise<void> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const accessToken = session?.access_token ?? "";
+
+    if (!accessToken) {
+      return;
+    }
+
+    await fetch("/api/payments/release", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ requirementId }),
+    });
+  } catch (err) {
+    console.error("Payment draft release error:", err);
+  }
+}
+
+/** Reads the admin-controlled payment configuration (never throws). */
+async function loadPaymentSettings(): Promise<PaymentSettings> {
+  try {
+    const { data, error } = await supabase.rpc("get_payment_settings");
+
+    if (error) {
+      console.error("Payment settings load error:", error.message);
+
+      return DEFAULT_PAYMENT_SETTINGS;
+    }
+
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | PaymentSettingsRow
+      | null;
+
+    return {
+      enabled: row?.payment_enabled === true,
+      amount: Number(row?.payment_amount ?? 0),
+      currency: String(row?.payment_currency ?? "INR").toUpperCase(),
+    };
+  } catch (err) {
+    console.error("Payment settings load error:", err);
+
+    return DEFAULT_PAYMENT_SETTINGS;
+  }
+}
 
 export default function RequirementPage() {const [isUrdu, setIsUrdu] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState("");
@@ -167,6 +293,8 @@ export default function RequirementPage() {const [isUrdu, setIsUrdu] = useState(
       setSelectedSubjects([decodedCourse]);
     }
   }, []);
+
+  // (Payment-flow resume effect moved below the state declarations it uses.)
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   const [teacherGender, setTeacherGender] = useState("Any");
@@ -202,10 +330,123 @@ const weekDays = [
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // ---- Optional (admin-controlled) payment step ----
+  // paymentSettings.enabled === false (the default) means every payment-related
+  // branch below is skipped and the free submission flow runs unchanged.
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>(
+    DEFAULT_PAYMENT_SETTINGS,
+  );
+  const [pendingRequirementId, setPendingRequirementId] = useState("");
+
+  // Idempotency key for this form session. Kept in sessionStorage so a retried
+  // submit (double click, network retry, page refresh before the insert
+  // resolved) collapses into the same requirement row instead of creating a
+  // duplicate one.
+  const [submissionKey] = useState(() => {
+    const existing = readSessionValue(SUBMISSION_KEY_STORAGE_KEY);
+
+    if (existing) {
+      return existing;
+    }
+
+    const created = createSubmissionKey();
+    writeSessionValue(SUBMISSION_KEY_STORAGE_KEY, created);
+
+    return created;
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loginNeeded, setLoginNeeded] = useState(false);
+// Loads the admin-controlled payment configuration and, if this tab already
+  // created a requirement that is waiting for payment, resumes that payment
+  // step instead of letting the student submit a duplicate requirement.
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initPaymentFlow() {
+      const settings = await loadPaymentSettings();
+
+      if (!isMounted) {
+        return;
+      }
+
+      setPaymentSettings(settings);
+
+      const storedRequirementId = readSessionValue(
+        PENDING_REQUIREMENT_STORAGE_KEY,
+      );
+
+      if (!settings.enabled || !storedRequirementId) {
+        if (!settings.enabled && storedRequirementId) {
+          // The gateway was switched OFF while this tab had an unpaid draft.
+          // Ask the server to release it (it refuses while the gateway is ON)
+          // so the student can submit again without leaving an unmatchable
+          // duplicate behind.
+          await releasePendingRequirement(storedRequirementId);
+          clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+          clearSessionValue(SUBMISSION_KEY_STORAGE_KEY);
+        }
+
+        return;
+      }
+
+      // The student must be signed in to own this requirement (and its
+      // payment). Row Level Security only ever returns their own row.
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user ?? null;
+
+      if (!isMounted || !user) {
+        // Not signed in (or signed out in the meantime): nothing to resume.
+        if (!user) {
+          clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+        }
+
+        return;
+      }
+
+      const { data: requirement, error: requirementError } = await supabase
+        .from("learning_requirements")
+        .select("id, payment_status")
+        .eq("id", storedRequirementId)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (requirementError || !requirement) {
+        // The draft no longer exists: let the student submit again.
+        clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+
+        return;
+      }
+
+      const status = String(
+        (requirement as { payment_status?: string }).payment_status ??
+          "not_required",
+      );
+
+      if (status === "pending") {
+        setPendingRequirementId(storedRequirementId);
+
+        return;
+      }
+
+      // Already resolved (paid, or the gateway was switched off): the
+      // requirement is submitted, so show the existing success screen.
+      clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+      clearSessionValue(SUBMISSION_KEY_STORAGE_KEY);
+      setSubmitted(true);
+    }
+
+    void initPaymentFlow();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function toggleSubject(subject: string) {
     setSelectedSubjects((current) =>
@@ -348,6 +589,11 @@ const weekDays = [
       const requirementData = {
         user_id: requirementUserId,
 
+        // Idempotency token for THIS form session: the unique index on
+        // (user_id, idempotency_key) makes a retried submit return the row the
+        // first attempt created instead of creating a duplicate requirement.
+        idempotency_key: submissionKey,
+
         parent_student_name: name.trim(),
         mobile_number: phone.trim(),
 
@@ -385,9 +631,11 @@ const weekDays = [
       // 3. INSERT INTO SUPABASE
       // ---------------------------------------
 
-      const { error: insertError } = await supabase
+      const { data: insertedRequirement, error: insertError } = await supabase
   .from("learning_requirements")
-  .insert(requirementData);
+  .insert(requirementData)
+  .select("id, payment_status")
+  .single();
 
 console.log(
   "INSERT ERROR:",
@@ -399,6 +647,29 @@ console.log(
       // ---------------------------------------
 
       if (insertError) {
+        // 23505 on the idempotency index = this form session already created
+        // its requirement (double click or a retry after the first attempt
+        // actually succeeded). Reuse that row instead of failing or inserting a
+        // second requirement.
+        if (insertError.code === "23505") {
+          const { data: existingRequirement } = await supabase
+            .from("learning_requirements")
+            .select("id, payment_status")
+            .eq("user_id", requirementUserId)
+            .eq("idempotency_key", submissionKey)
+            .maybeSingle();
+
+          const existingRow = existingRequirement as
+            | { id: string; payment_status: string | null }
+            | null;
+
+          if (existingRow?.id) {
+            await finishSubmission(existingRow.id, existingRow.payment_status);
+
+            return;
+          }
+        }
+
         setError(
           isUrdu
             ? copy.ur.dbError + insertError.message
@@ -412,12 +683,24 @@ console.log(
       // ---------------------------------------
       
       // ---------------------------------------
-      // 6. SUCCESS — redirect to the student dashboard.
-      // The account was just created and the session was
-      // returned by signUp, so the student is authenticated.
+      // 6. SUCCESS — when the payment gateway is ON the requirement is created
+      // as an unpaid draft and the student must pay before it counts as
+      // submitted. When the gateway is OFF the existing behaviour is preserved:
+      // the student is redirected to the dashboard right away.
       // ---------------------------------------
 
-      window.location.href = "/student/dashboard";
+      const insertedRow = insertedRequirement as
+        | { id: string; payment_status: string | null }
+        | null;
+
+      if (!insertedRow?.id) {
+        setError(
+          isUrdu ? copy.ur.genericError : copy.en.genericError
+        );
+        return;
+      }
+
+      await finishSubmission(insertedRow.id, insertedRow.payment_status);
     } catch (err) {
       console.error("REQUIREMENT SUBMIT ERROR:", err);
 
@@ -431,6 +714,79 @@ console.log(
     } finally {
       setLoading(false);
     }
+  }
+
+  /**
+   * Decides what happens after the requirement row exists.
+   *
+   *  * payment_status === 'pending' (the payment gateway is ON and the database
+   *    decided this requirement is unpaid): the student stays on this page and
+   *    completes the payment step. The requirement is NOT submitted yet and is
+   *    explicitly blocked from teacher matching until it is paid.
+   *  * anything else (the gateway is OFF, or the payment already succeeded):
+   *    the existing flow continues unchanged.
+   */
+  async function finishSubmission(
+    requirementId: string,
+    paymentStatus: string | null | undefined,
+  ) {
+    if (paymentStatus === "pending") {
+      writeSessionValue(PENDING_REQUIREMENT_STORAGE_KEY, requirementId);
+      setPendingRequirementId(requirementId);
+      setError("");
+
+      return;
+    }
+
+    // Existing (free) behaviour: the requirement is submitted immediately and
+    // the student is redirected to the dashboard, exactly as before.
+    clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+    clearSessionValue(SUBMISSION_KEY_STORAGE_KEY);
+    window.location.href = "/student/dashboard";
+  }
+
+  // ==========================================
+  // PAYMENT STEP (only while a requirement is awaiting payment)
+  // ==========================================
+  // Rendered only when the server-reported payment setting is ON and the
+  // database created this requirement as 'pending'. The student can never mark
+  // it as paid from here: the payment is confirmed by
+  // POST /api/payments/verify using the gateway signature, server-side.
+
+  if (pendingRequirementId && paymentSettings.enabled) {
+    return (
+      <main
+        dir={isUrdu ? "rtl" : undefined}
+        lang={isUrdu ? "ur" : undefined}
+        className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900"
+      >
+        <div className="mx-auto max-w-3xl">
+          <RequirementPaymentStep
+            requirementId={pendingRequirementId}
+            settings={paymentSettings}
+            isUrdu={isUrdu}
+            studentName={name.trim() || undefined}
+            studentEmail={email.trim() || undefined}
+            studentPhone={phone.trim() || undefined}
+            onPaid={() => {
+              clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+              clearSessionValue(SUBMISSION_KEY_STORAGE_KEY);
+              setPendingRequirementId("");
+              setSubmitted(true);
+            }}
+            onResolved={() => {
+              // The server reports that this requirement no longer needs a
+              // payment (the admin switched the gateway off, or it is already
+              // paid): it is submitted, so show the existing success screen.
+              clearSessionValue(PENDING_REQUIREMENT_STORAGE_KEY);
+              clearSessionValue(SUBMISSION_KEY_STORAGE_KEY);
+              setPendingRequirementId("");
+              setSubmitted(true);
+            }}
+          />
+        </div>
+      </main>
+    );
   }
 
   // ==========================================

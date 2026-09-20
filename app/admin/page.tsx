@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import MatchedTeacherSection from "@/components/MatchedTeacherSection";
+import AdminPaymentSettings from "@/components/AdminPaymentSettings";
 
 type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
 type Requirement = {
@@ -157,105 +158,20 @@ async function connectTeacherToRequirement(
   setConnectingTeacherId(teacher.id);
   setError("");
 
-  const { error: matchError } = await supabase
-    .from("requirement_teacher_matches")
-    .insert({
-      requirement_id: requirement.id,
-      teacher_id: teacher.id,
-      status: "connected",
-    });
+  const { error: rpcError } = await supabase.rpc("admin_connect_teacher_to_requirement", {
+    p_requirement_id: requirement.id,
+    p_teacher_id: teacher.id,
+  });
 
-  if (matchError) {
-    console.error("TEACHER MATCH ERROR:", matchError);
-    setError(`Could not connect teacher: ${matchError.message}`);
-    setConnectingTeacherId(null);
-    return;
-  }
-
-  // Persist the requirement status so it survives page reloads.
-  const { error: statusError } = await supabase
-    .from("learning_requirements")
-    .update({ status: "matched" })
-    .eq("id", requirement.id);
-
-  if (statusError) {
-    console.error("REQUIREMENT STATUS ERROR:", statusError);
+  if (rpcError) {
+    console.error("TEACHER MATCH ERROR:", rpcError);
     setError(
-      `Teacher connected, but status could not be saved: ${statusError.message}`
+      rpcError.message
+        ? `Could not connect teacher: ${rpcError.message}`
+        : "Could not connect teacher."
     );
     setConnectingTeacherId(null);
     return;
-  }
-
-  // Notify the teacher. Message contains no private student contact
-  // details (name, phone, email) and no budget/fee information.
-  const { error: notifyError } = await supabase
-    .from("notifications")
-    .insert({
-      user_id: teacher.id,
-      title: "New student requirement",
-      message: `A new ${
-        requirement.subjects?.length
-          ? requirement.subjects.join(", ")
-          : "learning"
-      } requirement has been assigned to you. Please review and respond.`,
-      type: "teacher_match",
-      related_requirement_id: requirement.id,
-      related_teacher_id: teacher.id,
-      is_read: false,
-    });
-
-  if (notifyError) {
-    console.error("NOTIFICATION ERROR:", notifyError);
-    setError(
-      `Teacher connected, but notification could not be sent: ${notifyError.message}`
-    );
-    setConnectingTeacherId(null);
-    return;
-  }
-
-  // Notify the student whose learning_requirements row was matched.
-  // The recipient comes from requirement.user_id (loaded from the DB),
-  // never from a client-supplied value. Anonymous requirements with a
-  // null user_id are skipped. The match is already created — notification
-  // failures here must not roll back or undo the successful teacher match.
-  if (requirement.user_id) {
-    const { data: existingStudentNotification, error: studentCheckError } =
-      await supabase
-        .from("notifications")
-        .select("id")
-        .eq("user_id", requirement.user_id)
-        .eq("related_requirement_id", requirement.id)
-        .eq("related_teacher_id", teacher.id)
-        .eq("type", "student_match")
-        .limit(1);
-
-    if (studentCheckError) {
-      console.error("STUDENT NOTIFICATION CHECK ERROR:", studentCheckError);
-    } else if (!existingStudentNotification || existingStudentNotification.length === 0) {
-      const { error: studentNotifyError } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: requirement.user_id,
-          title: "A teacher has been assigned to your requirement",
-          message: `A teacher has been connected to your ${
-            requirement.subjects?.length
-              ? requirement.subjects.join(", ")
-              : "learning"
-          } requirement. They will review and respond soon.`,
-          type: "student_match",
-          related_requirement_id: requirement.id,
-          related_teacher_id: teacher.id,
-          is_read: false,
-        });
-
-      if (studentNotifyError) {
-        console.error("STUDENT NOTIFICATION ERROR:", studentNotifyError);
-        setError(
-          "Teacher connected, but the student could not be notified. Please try again later."
-        );
-      }
-    }
   }
 
   setRequirements((current) =>
@@ -848,6 +764,11 @@ async function connectTeacherToRequirement(
           )}
         </div>
       </section>
+
+      {/* PAYMENT GATEWAY SETTING (admin-only) */}
+      <div className="mx-auto max-w-7xl px-6 pb-10">
+        <AdminPaymentSettings />
+      </div>
 
       {/* DETAIL MODAL */}
       {selectedRequirement && (
