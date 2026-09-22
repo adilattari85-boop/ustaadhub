@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface HeroSlide {
   src: string;
@@ -14,15 +14,25 @@ interface HeroCarouselProps {
   autoplayInterval?: number;
   /** Pause autoplay while hovering / focusing the carousel. */
   pauseOnHover?: boolean;
+  /** Show the previous/next arrows (defaults to true). */
+  showArrows?: boolean;
+  /** Show the bottom-centre slide indicators (defaults to true). */
+  showIndicators?: boolean;
+  /** Called whenever the visible slide changes (used to sync an outer preview). */
+  onSlideChange?: (index: number) => void;
 }
 
 export default function HeroCarousel({
   slides,
   autoplayInterval = 4500,
   pauseOnHover = true,
+  showArrows = true,
+  showIndicators = true,
+  onSlideChange,
 }: HeroCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const count = slides.length;
   const multi = count > 1;
 
@@ -33,17 +43,40 @@ export default function HeroCarousel({
     }
   }, [count, current]);
 
+  // Respect users who prefer reduced motion: the slides stay, but the automatic
+  // rotation stops (the indicators still allow switching manually).
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  // Let the parent follow the visible slide (used by the hero preview frame).
+  // The callback is held in a ref so an inline function passed by the parent
+  // cannot re-trigger this effect on every render.
+  const onSlideChangeRef = useRef(onSlideChange);
+
+  useEffect(() => {
+    onSlideChangeRef.current = onSlideChange;
+  }, [onSlideChange]);
+
+  useEffect(() => {
+    onSlideChangeRef.current?.(current);
+  }, [current]);
+
   // Autoplay: only when there is more than one slide and not paused.
   // Depending on `current` means any manual navigation restarts the timer.
   useEffect(() => {
-    if (!multi || paused) {
+    if (!multi || paused || reduceMotion) {
       return;
     }
     const timer = window.setInterval(() => {
       setCurrent((prev) => (prev + 1) % count);
     }, autoplayInterval);
     return () => window.clearInterval(timer);
-  }, [multi, paused, count, autoplayInterval, current]);
+  }, [multi, paused, reduceMotion, count, autoplayInterval, current]);
 
   const goTo = useCallback(
     (index: number) => {
@@ -83,14 +116,14 @@ export default function HeroCarousel({
             alt={slide.alt}
             loading={index === 0 ? "eager" : "lazy"}
             draggable={false}
-            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-700 ease-in-out ${
+            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-700 ease-in-out motion-reduce:transition-none ${
               index === current ? "opacity-100" : "opacity-0"
             }`}
           />
         ))}
       </div>
 {/* Previous / Next controls — hidden when only one slide exists */}
-      {multi && (
+      {multi && showArrows && (
         <button
           type="button"
           onClick={prev}
@@ -113,7 +146,7 @@ export default function HeroCarousel({
         </button>
       )}
 
-      {multi && (
+      {multi && showArrows && (
         <button
           type="button"
           onClick={next}
@@ -137,7 +170,7 @@ export default function HeroCarousel({
       )}
 
       {/* Bottom-center indicators — only rendered when more than one slide */}
-      {multi && (
+      {multi && showIndicators && (
         <div
           className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2.5 sm:bottom-5"
           role="tablist"

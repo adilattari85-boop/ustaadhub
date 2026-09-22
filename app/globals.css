@@ -58,3 +58,157 @@ option {
     bottom: max(2rem, env(safe-area-inset-bottom));
   }
 }
+
+/* ===== Homepage hero — subtle premium motion =====
+   Gentle fade-up reveals for the hero copy, plus the very slow float / pulse /
+   parallax of the website-preview showcase (see HeroShowcase).
+   All of it is switched off for users who prefer reduced motion (bottom of this file). */
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Staggered entrance — combine with .hero-delay-* for the sequence. */
+.hero-reveal {
+  animation: hero-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-delay-1 {
+  animation-delay: 90ms;
+}
+
+.hero-delay-2 {
+  animation-delay: 180ms;
+}
+
+.hero-delay-3 {
+  animation-delay: 270ms;
+}
+
+.hero-delay-4 {
+  animation-delay: 360ms;
+}
+
+.hero-delay-5 {
+  animation-delay: 450ms;
+}
+
+.hero-delay-6 {
+  animation-delay: 540ms;
+}
+
+.hero-blob {
+  border-radius: 9999px;
+  filter: blur(60px);
+}
+
+.hero-grid-overlay {
+  background-image: linear-gradient(
+      to right,
+      rgba(37, 99, 235, 0.06) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(
+    ellipse at 50% 0%,
+    #000 0%,
+    transparent 70%
+  );
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 70%);
+}
+
+/* ===== Hero website-preview showcase =====
+   The existing UstaadHub screenshots sit inside a framed website preview. The motion
+   is deliberately tiny: a slow float, a barely-there scale pulse and a slow parallax
+   drift on the narrow continuation column. */
+@keyframes hero-showcase-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -9px, 0);
+  }
+}
+
+@keyframes hero-showcase-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.014);
+  }
+}
+
+@keyframes hero-showcase-parallax {
+  0%,
+  100% {
+    transform: translate3d(-2.5%, 0, 0);
+  }
+  50% {
+    transform: translate3d(2.5%, 0, 0);
+  }
+}
+
+/* Phones keep the calm stacked layout, so the float and pulse only start at md. */
+@media (min-width: 768px) {
+  .hero-showcase {
+    animation: hero-showcase-float 15s ease-in-out infinite;
+  }
+
+  .hero-showcase-frame {
+    animation: hero-showcase-pulse 19s ease-in-out 600ms infinite;
+  }
+}
+
+.hero-showcase-side {
+  animation: hero-showcase-parallax 21s ease-in-out 1200ms infinite;
+}
+
+/* Respect users who prefer reduced motion: no reveals, floating or drifting. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal,
+  .hero-showcase,
+  .hero-showcase-frame,
+  .hero-showcase-side,
+  .jobs-ticker-track {
+    animation: none !important;
+  }
+}
+
+/* ===== Jobs & Opportunities ticker (homepage, under nav) =====
+   Thin CSS-only marquee. The track holds two copies of the job list and
+   translates -50% so the loop is seamless. dir="ltr" is locked on the
+   track so /ur RTL pages keep the same motion; each job title itself
+   still renders in the page direction. */
+.jobs-ticker {
+  overflow-x: clip;
+}
+
+.jobs-ticker-track {
+  --jobs-ticker-duration: 36s;
+  animation: jobs-ticker-scroll var(--jobs-ticker-duration) linear infinite;
+  will-change: transform;
+}
+
+@keyframes jobs-ticker-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.jobs-ticker:hover .jobs-ticker-track,
+.jobs-ticker:focus-within .jobs-ticker-track {
+  animation-play-state: paused;
+}

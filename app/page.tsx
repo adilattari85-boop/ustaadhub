@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import HeroCarousel from "@/components/HeroCarousel";
+import HeroShowcase from "@/components/HeroShowcase";
+import JobsTicker from "@/components/JobsTicker";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -35,6 +36,31 @@ const homeSchema = {
     url: "https://www.ustaadhub.in",
   },
 };
+
+// Hero banner slides — the existing 1440×720 UstaadHub screenshots in public/.
+// They crossfade inside the hero website-preview frame (see HeroShowcase).
+const heroSlides = [
+  {
+    src: "/hero-1.png",
+    alt: "UstaadHub homepage — find the right teacher for Quran, Islamic studies, Arabic and more",
+  },
+  {
+    src: "/hero-2.png",
+    alt: "UstaadHub homepage — personalised one-to-one online classes with experienced teachers",
+  },
+  {
+    src: "/hero-3.png",
+    alt: "UstaadHub homepage — learn Quran, Islamic Studies, Arabic and languages online",
+  },
+  {
+    src: "/hero-4.png",
+    alt: "UstaadHub homepage — connect with trusted, verified teachers",
+  },
+  {
+    src: "/hero-5.png",
+    alt: "UstaadHub homepage — flexible timings and personalised learning",
+  },
+];
 
 type TeacherProfile = {
   id: string;
@@ -70,31 +96,6 @@ function formatFee(value: number | null, period: "week" | "month") {
   return `₹${value.toLocaleString("en-IN")}/${period}`;
 }
 
-// Hero banner slides — 5 uploaded Gemini banner images (1440×720).
-// The carousel autoplays every 4.5s with fade, arrows, dots and pause-on-hover.
-const heroSlides = [
-  {
-    src: "/hero-1.png",
-    alt: "UstaadHub – find the right teacher for Quran, Islamic studies, Arabic and more",
-  },
-  {
-    src: "/hero-2.png",
-    alt: "UstaadHub – personalised one-to-one online classes with experienced teachers",
-  },
-  {
-    src: "/hero-3.png",
-    alt: "UstaadHub – learn Quran, Islamic Studies, Arabic and languages online",
-  },
-  {
-    src: "/hero-4.png",
-    alt: "UstaadHub – connect with trusted, verified teachers",
-  },
-  {
-    src: "/hero-5.png",
-    alt: "UstaadHub – flexible timings and personalised learning",
-  },
-];
-
 const copy = {
   en: {
     findTeachers: "Find Teachers",
@@ -107,6 +108,20 @@ const copy = {
     heroTitleC: "for Quran, Arabic & Islamic Studies.",
     heroDescription:
       "Learn Quran, Islamic Studies, Arabic, languages and more from experienced teachers through personalised one-to-one online classes.",
+    heroCtaPrimary: "Find a Teacher",
+    heroCtaSecondary: "Post a Requirement",
+    heroLiveClass: "Live 1:1 class",
+    heroFocusSubject: "Quran & Tajweed",
+    heroTeacherLabel: "Verified Teacher",
+    heroTeacherSubjects: "Quran, Tajweed & Hifz",
+    heroStudentLabel: "Student",
+    heroLessonProgress: "Lesson progress",
+    heroTrustVerifiedTitle: "Verified Teachers",
+    heroTrustVerifiedDesc: "Reviewed and onboarded by UstaadHub",
+    heroTrustFlexibleTitle: "Flexible Learning",
+    heroTrustFlexibleDesc: "Pick timings that suit your schedule",
+    heroTrustOneToOneTitle: "1:1 Live Classes",
+    heroTrustOneToOneDesc: "Personal attention in every class",
     searchPlaceholder: "Search a course or subject...",
     matchingCourses: "Matching courses",
     popularCourses: "Popular courses",
@@ -238,6 +253,20 @@ const copy = {
     heroTitleC: "قرآن، عربی اور اسلامیات کے لئے تلاش کریں۔",
     heroDescription:
       "قرآن، اسلامیات، عربی، زبانیں اور مزید مضامین تجربہ کار اساتذہ سے ذاتی نوعیت کی ون آن ون آن لائن کلاسز کے ذریعے سیکھیں۔",
+    heroCtaPrimary: "استاد تلاش کریں",
+    heroCtaSecondary: "اپنی ضرورت پوسٹ کریں",
+    heroLiveClass: "لائیو ون آن ون کلاس",
+    heroFocusSubject: "قرآن و تجوید",
+    heroTeacherLabel: "تصدیق شدہ استاد",
+    heroTeacherSubjects: "قرآن، تجوید اور حفظ",
+    heroStudentLabel: "طالب علم",
+    heroLessonProgress: "سبق کی پیش رفت",
+    heroTrustVerifiedTitle: "تصدیق شدہ اساتذہ",
+    heroTrustVerifiedDesc: "UstaadHub کی جانب سے جانچ اور آن بورڈنگ",
+    heroTrustFlexibleTitle: "لچکدار سیکھنا",
+    heroTrustFlexibleDesc: "اپنے شیڈول کے مطابق اوقات منتخب کریں",
+    heroTrustOneToOneTitle: "ون آن ون لائیو کلاسز",
+    heroTrustOneToOneDesc: "ہر کلاس میں ذاتی توجہ",
     searchPlaceholder: "کورس یا مضمون تلاش کریں...",
     matchingCourses: "مماثل کورسز",
     popularCourses:"مقبول کورسز",
@@ -584,26 +613,33 @@ function selectCourse(course: string) {
           </div>
         </div>
       </nav>
+      <JobsTicker locale={isUrdu ? "ur" : "en"} />
  <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        {/* Hero banner carousel — full-width 2:1 (1440×720) banner shown clearly, no white overlay */}
-        <div className="relative w-full overflow-hidden aspect-[2/1]">
-          <HeroCarousel slides={heroSlides} autoplayInterval={4500} />
+        {/* Static background — soft gradient blobs and a faint grid, purely decorative */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <div className="hero-blob absolute -left-24 -top-32 h-80 w-80 bg-blue-300/40 sm:h-[26rem] sm:w-[26rem]" />
+          <div className="hero-blob hero-blob-2 absolute -right-20 top-10 h-72 w-72 bg-indigo-300/35 sm:h-96 sm:w-96" />
+          <div className="hero-blob hero-blob-3 absolute -bottom-24 left-1/3 h-72 w-72 bg-sky-200/45 sm:h-[22rem] sm:w-[22rem]" />
+          <div className="hero-grid-overlay absolute inset-0" />
         </div>
 
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:grid-cols-2 md:items-center md:py-28">
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-5 pb-12 pt-10 sm:pt-12 md:grid-cols-2 md:items-center md:gap-12 md:pb-12 md:pt-8">
       {/* HERO */}
   <div className={isUrdu ? "min-w-0" : undefined}>
 
-            <div className="mb-6 inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+            <div className="hero-reveal mb-4 inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
               {t.heroBadge}
             </div>
 
             <h1
-              className={
+              className={`hero-reveal hero-delay-1 text-balance ${
                 isUrdu
-                  ? "text-4xl font-extrabold leading-normal tracking-normal md:text-5xl"
-                  : "text-5xl font-extrabold leading-tight tracking-tight md:text-6xl"
-              }
+                  ? "text-4xl font-extrabold leading-normal tracking-normal md:text-[2rem] lg:text-[2.25rem] xl:text-[2.5rem]"
+                  : "text-5xl font-extrabold leading-[1.15] tracking-tight md:text-[2.25rem] lg:text-[2.5rem] xl:text-[3rem]"
+              }`}
             >
               {t.heroTitleA}
               <span className="text-blue-700">{isUrdu ? " استاد " : " Ustaad "}</span>
@@ -611,17 +647,39 @@ function selectCourse(course: string) {
             </h1>
 
             <p
-              className={
+              className={`hero-reveal hero-delay-2 ${
                 isUrdu
-                  ? "mt-6 max-w-xl text-lg leading-9 text-gray-600"
-                  : "mt-6 max-w-xl text-lg leading-8 text-gray-600"
-              }
+                  ? "mt-3 max-w-xl text-lg leading-9 text-gray-600"
+                  : "mt-3 max-w-xl text-lg leading-8 text-gray-600"
+              }`}
             >
               {t.heroDescription}
             </p>
 
+            {/* PRIMARY + SECONDARY CTA */}
+            <div className="hero-reveal hero-delay-3 mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <Link
+                href="/teachers"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-blue-700/20 transition hover:-translate-y-0.5 hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:text-lg"
+              >
+                {t.heroCtaPrimary}
+                <span aria-hidden="true">→</span>
+              </Link>
+
+              <Link
+                href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
+                className="inline-flex items-center justify-center rounded-xl border-2 border-blue-700 bg-white/80 px-6 py-3.5 text-base font-bold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:text-lg"
+              >
+                {t.heroCtaSecondary}
+              </Link>
+            </div>
+
+            <p className="hero-reveal hero-delay-4 mt-2 text-sm text-gray-500">
+              {t.tellUs}
+            </p>
+
             {/* COURSE SEARCH */}
-            <div className="mt-8 max-w-4xl">
+            <div className="hero-reveal hero-delay-5 mt-4 max-w-4xl">
               <div className="rounded-2xl bg-white p-3 shadow-xl ring-1 ring-gray-200 sm:p-4">
 
                 <div className="flex flex-col gap-3 sm:flex-row">
@@ -742,60 +800,89 @@ function selectCourse(course: string) {
               </div>
             </div>
 
-            {/* REQUIREMENT BUTTON */}
-            <div className="mt-5">
-              <a
-                href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-blue-800 sm:text-lg"
-              >
-                {t.postRequirement}
-              </a>
-
-              <p className="mt-3 text-sm text-gray-500">
-                {t.tellUs}
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
-              <span>{t.oneToOne}</span>
-              <span>{t.flexibleTimings}</span>
-              <span>{t.experiencedTeachers}</span>
-            </div>
-
           </div>
-          {/* HERO CARD */}
-          <div className="mx-auto w-full max-w-md">
-            <div className="rounded-3xl bg-white p-5 shadow-2xl">
-              <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-center text-white">
-                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white text-4xl font-bold text-blue-700 shadow-lg">
-                  U
+          {/* HERO VISUAL — the existing UstaadHub screenshots presented as a website preview */}
+          <div className="hero-reveal hero-delay-3 relative mx-auto w-full max-w-md md:max-w-none">
+            {/* soft ambient glow behind the preview (decorative only) */}
+            <div
+              aria-hidden="true"
+              className="absolute -inset-6 rounded-[3rem] bg-gradient-to-tr from-blue-200/50 via-sky-100/40 to-indigo-200/50 blur-2xl"
+            />
+
+            <HeroShowcase
+              slides={heroSlides}
+              urlLabel={isUrdu ? "ustaadhub.in/ur" : "ustaadhub.in"}
+              autoplayInterval={5200}
+            />
+
+            {/* compact highlights — no longer floating over the screenshot */}
+            <div className="relative mt-4">
+              <div className="grid grid-cols-3 gap-2 rounded-2xl border border-blue-100/70 bg-white/70 p-2.5 text-center backdrop-blur sm:gap-3 sm:p-3">
+                <div>
+                  <div className="text-base font-bold text-blue-700 sm:text-lg">1:1</div>
+                  <div className="mt-0.5 text-[11px] text-gray-500">{t.classes}</div>
                 </div>
 
-                <h2 className="mt-6 text-2xl font-bold">
-                  {t.journeyStarts}
-                </h2>
+                <div>
+                  <div className="text-base font-bold text-blue-700 sm:text-lg">
+                    {verifiedTeacherCount}+
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-gray-500">{t.teachers}</div>
+                </div>
 
-                <p className="mt-3 text-blue-100">
-                  {t.connectRight}
-                </p>
+                <div>
+                  <div className="text-base font-bold text-blue-700 sm:text-lg">24/7</div>
+                  <div className="mt-0.5 text-[11px] text-gray-500">{t.learning}</div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 p-3">
-                <div className="rounded-xl bg-gray-50 p-4 text-center">
-                  <div className="text-xl font-bold text-blue-700">1:1</div>
-                  <div className="mt-1 text-xs text-gray-500">{t.classes}</div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="flex items-start gap-2 rounded-xl border border-blue-100/70 bg-white/70 px-3 py-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-100 text-xs font-bold text-blue-700"
+                  >
+                    ✓
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900">{t.heroTrustVerifiedTitle}</p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-gray-500">
+                      {t.heroTrustVerifiedDesc}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="rounded-xl bg-gray-50 p-4 text-center">
-                  <div className="text-xl font-bold text-blue-700">
-  {verifiedTeacherCount}+
-</div>
-                  <div className="mt-1 text-xs text-gray-500">{t.teachers}</div>
+                <div className="flex items-start gap-2 rounded-xl border border-blue-100/70 bg-white/70 px-3 py-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-100 text-sm text-blue-700"
+                  >
+                    ⏰
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900">{t.heroTrustFlexibleTitle}</p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-gray-500">
+                      {t.heroTrustFlexibleDesc}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="rounded-xl bg-gray-50 p-4 text-center">
-                  <div className="text-xl font-bold text-blue-700">24/7</div>
-                  <div className="mt-1 text-xs text-gray-500">{t.learning}</div>
+                <div className="flex items-start gap-2 rounded-xl border border-blue-100/70 bg-white/70 px-3 py-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-100 text-[10px] font-bold text-blue-700"
+                  >
+                    1:1
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900">{t.heroTrustOneToOneTitle}</p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-gray-500">
+                      {t.heroTrustOneToOneDesc}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
