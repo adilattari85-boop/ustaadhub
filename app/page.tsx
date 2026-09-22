@@ -2,7 +2,6 @@
 
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import HeroShowcase from "@/components/HeroShowcase";
-import JobsTicker from "@/components/JobsTicker";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -613,8 +612,7 @@ function selectCourse(course: string) {
           </div>
         </div>
       </nav>
-      <JobsTicker locale={isUrdu ? "ur" : "en"} />
- <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Static background — soft gradient blobs and a faint grid, purely decorative */}
         <div
           aria-hidden="true"
