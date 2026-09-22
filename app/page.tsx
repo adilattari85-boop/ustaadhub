@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import HeroShowcase from "@/components/HeroShowcase";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { courseUrduLabels } from "@/lib/urdu";
@@ -19,7 +19,7 @@ import {
   FaYoutube,
 } from "react-icons/fa";
 
-// Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
+// Structured data (JSON-LD) for the homepage � describes genuine UstaadHub
 // organization/website info only. No invented ratings, reviews or offers.
 const homeSchema = {
   "@context": "https://schema.org",
@@ -36,28 +36,28 @@ const homeSchema = {
   },
 };
 
-// Hero banner slides — the existing 1440×720 UstaadHub screenshots in public/.
+// Hero banner slides � the existing 1440�720 UstaadHub screenshots in public/.
 // They crossfade inside the hero website-preview frame (see HeroShowcase).
 const heroSlides = [
   {
     src: "/hero-1.png",
-    alt: "UstaadHub homepage — find the right teacher for Quran, Islamic studies, Arabic and more",
+    alt: "UstaadHub homepage � find the right teacher for Quran, Islamic studies, Arabic and more",
   },
   {
     src: "/hero-2.png",
-    alt: "UstaadHub homepage — personalised one-to-one online classes with experienced teachers",
+    alt: "UstaadHub homepage � personalised one-to-one online classes with experienced teachers",
   },
   {
     src: "/hero-3.png",
-    alt: "UstaadHub homepage — learn Quran, Islamic Studies, Arabic and languages online",
+    alt: "UstaadHub homepage � learn Quran, Islamic Studies, Arabic and languages online",
   },
   {
     src: "/hero-4.png",
-    alt: "UstaadHub homepage — connect with trusted, verified teachers",
+    alt: "UstaadHub homepage � connect with trusted, verified teachers",
   },
   {
     src: "/hero-5.png",
-    alt: "UstaadHub homepage — flexible timings and personalised learning",
+    alt: "UstaadHub homepage � flexible timings and personalised learning",
   },
 ];
 
@@ -92,7 +92,7 @@ function getInitials(name: string | null) {
 function formatFee(value: number | null, period: "week" | "month") {
   if (value === null || value === undefined) return null;
 
-  return `₹${value.toLocaleString("en-IN")}/${period}`;
+  return `?${value.toLocaleString("en-IN")}/${period}`;
 }
 
 const copy = {
@@ -102,7 +102,7 @@ const copy = {
     howItWorks: "How It Works",
     login: "Login",
     joinAsTeacher: "Join as Teacher",
-    heroBadge: "✨ Verified 1:1 teachers",
+    heroBadge: "? Verified 1:1 teachers",
     heroTitleA: "Find the right",
     heroTitleC: "for Quran, Arabic & Islamic Studies.",
     heroDescription:
@@ -127,12 +127,12 @@ const copy = {
     noMatchingCourse: "No matching course found.",
     searchCourses: "Find Teachers",
     popular: "Popular:",
-    postRequirement: "📝 Post Your Learning Requirement",
+    postRequirement: "?? Post Your Learning Requirement",
     tellUs:
-      "Tell us what you want to learn — we’ll help you find the right teacher.",
-    oneToOne: "✓ One-to-one classes",
-    flexibleTimings: "✓ Flexible timings",
-    experiencedTeachers: "✓ Experienced teachers",
+      "Tell us what you want to learn � we�ll help you find the right teacher.",
+    oneToOne: "? One-to-one classes",
+    flexibleTimings: "? Flexible timings",
+    experiencedTeachers: "? Experienced teachers",
     journeyStarts: "Your learning journey starts here",
     connectRight: "Connect with the right teacher for your goals.",
     classes: "Classes",
@@ -142,24 +142,37 @@ const copy = {
     whatLearn: "What do you want to learn?",
     chooseSubject:
       "Choose a subject and discover teachers who can help you learn at your own pace.",
-    findTeacher: "Find a teacher →",
+    findTeacher: "Find a teacher ?",
     featuredTeachers: "FEATURED TEACHERS",
     learnExperienced: "Learn from experienced teachers",
     discoverVerified:
       "Discover verified teachers based on their expertise and fees.",
-    viewAll: "View all teachers →",
+    viewAll: "View all teachers ?",
     loadingVerified: "Loading verified teachers...",
     teachersError:
       "Unable to load featured teachers. Please refresh the page and try again.",
     noVerified: "No verified teachers available yet.",
     subjectsNotSpecified: "Subjects not specified",
-    verified: "✓ Verified",
+    verified: "? Verified",
     experience: "Experience",
     notSpecified: "Not specified",
     teachingMode: "Teaching mode",
     languages: "Languages",
     fees: "Fees",
     viewProfile: "View Profile",
+    tutorSearchPlaceholder: "Search by teacher name, subject, or language...",
+    tutorSearchLabel: "Search teachers",
+    tutorClearSearch: "Clear search",
+    tutorFilterAll: "All",
+    tutorFilterQuran: "Quran & Tajweed",
+    tutorFilterHifz: "Hifz",
+    tutorFilterAcademic: "Academic",
+    tutorFilterIslamic: "Islamic Studies",
+    tutorFilterLanguages: "Languages",
+    tutorResultsCount: "teachers found",
+    tutorNoResultsTitle: "No results found",
+    tutorNoResultsHint: "Try a different name, subject, or category.",
+    tutorResetFilters: "Reset Filters",
     simpleProcess: "SIMPLE PROCESS",
     howWorks: "How UstaadHub works",
     step1Title: "Choose what to learn",
@@ -174,8 +187,8 @@ const copy = {
     rightTeacher: "Find the Right Teacher for You",
     demoDesc:
       "Book a demo class and experience the right learning approach before you decide.",
-    bookDemo: "🎓 Book a Demo Class",
-    rightsReserved: "© 2026 UstaadHub. All rights reserved.",
+    bookDemo: "?? Book a Demo Class",
+    rightsReserved: "� 2026 UstaadHub. All rights reserved.",
     // About section
     aboutUstaadHub: "ABOUT USTAADHUB",
     aboutTitle: "About UstaadHub",
@@ -188,7 +201,7 @@ const copy = {
     aboutTeachers:
       "Teachers can create a profile and go through our verification and onboarding process before they start offering classes.",
     aboutNotAutomatic:
-      "Teacher matching is assisted by our admin team — it is not fully automatic.",
+      "Teacher matching is assisted by our admin team � it is not fully automatic.",
     // FAQ section
     faq: "FAQ",
     faqTitle: "Frequently Asked Questions",
@@ -242,174 +255,221 @@ const copy = {
     footerTermsConditions: "Terms & Conditions",
   },
   ur: {
-    findTeachers: "اساتذہ تلاش کریں",
-    subjects: "مضامین",
-    howItWorks: "یہ کیسے کام کرتا ہے؟",
-    login: "لاگ اِن",
-    joinAsTeacher: "بطور استاد شامل ہوں",
-    heroBadge: "✨ تصدیق شدہ 1:1 اساتذہ",
-    heroTitleA: "درست",
-    heroTitleC: "قرآن، عربی اور اسلامیات کے لئے تلاش کریں۔",
+    findTeachers: "?????? ???? ????",
+    subjects: "??????",
+    howItWorks: "?? ???? ??? ???? ???",
+    login: "??? ???",
+    joinAsTeacher: "???? ????? ???? ???",
+    heroBadge: "? ????? ??? 1:1 ??????",
+    heroTitleA: "????",
+    heroTitleC: "????? ???? ??? ???????? ?? ??? ???? ?????",
     heroDescription:
-      "قرآن، اسلامیات، عربی، زبانیں اور مزید مضامین تجربہ کار اساتذہ سے ذاتی نوعیت کی ون آن ون آن لائن کلاسز کے ذریعے سیکھیں۔",
-    heroCtaPrimary: "استاد تلاش کریں",
-    heroCtaSecondary: "اپنی ضرورت پوسٹ کریں",
-    heroLiveClass: "لائیو ون آن ون کلاس",
-    heroFocusSubject: "قرآن و تجوید",
-    heroTeacherLabel: "تصدیق شدہ استاد",
-    heroTeacherSubjects: "قرآن، تجوید اور حفظ",
-    heroStudentLabel: "طالب علم",
-    heroLessonProgress: "سبق کی پیش رفت",
-    heroTrustVerifiedTitle: "تصدیق شدہ اساتذہ",
-    heroTrustVerifiedDesc: "UstaadHub کی جانب سے جانچ اور آن بورڈنگ",
-    heroTrustFlexibleTitle: "لچکدار سیکھنا",
-    heroTrustFlexibleDesc: "اپنے شیڈول کے مطابق اوقات منتخب کریں",
-    heroTrustOneToOneTitle: "ون آن ون لائیو کلاسز",
-    heroTrustOneToOneDesc: "ہر کلاس میں ذاتی توجہ",
-    searchPlaceholder: "کورس یا مضمون تلاش کریں...",
-    matchingCourses: "مماثل کورسز",
-    popularCourses:"مقبول کورسز",
-    noMatchingCourse:"کوئی مماثل کورس نہیں ملا۔",
-    searchCourses:"اساتذہ تلاش کریں",
-    popular:"مقبول:",
-    postRequirement:"📝 اپنی تعلیمی ضرورت پوسٹ کریں",
+      "????? ????????? ????? ?????? ??? ???? ?????? ????? ??? ?????? ?? ???? ????? ?? ?? ?? ?? ?? ???? ????? ?? ????? ???????",
+    heroCtaPrimary: "????? ???? ????",
+    heroCtaSecondary: "???? ????? ???? ????",
+    heroLiveClass: "????? ?? ?? ?? ????",
+    heroFocusSubject: "???? ? ?????",
+    heroTeacherLabel: "????? ??? ?????",
+    heroTeacherSubjects: "????? ????? ??? ???",
+    heroStudentLabel: "???? ???",
+    heroLessonProgress: "??? ?? ??? ???",
+    heroTrustVerifiedTitle: "????? ??? ??????",
+    heroTrustVerifiedDesc: "UstaadHub ?? ???? ?? ???? ??? ?? ??????",
+    heroTrustFlexibleTitle: "?????? ??????",
+    heroTrustFlexibleDesc: "???? ????? ?? ????? ????? ????? ????",
+    heroTrustOneToOneTitle: "?? ?? ?? ????? ?????",
+    heroTrustOneToOneDesc: "?? ???? ??? ???? ????",
+    searchPlaceholder: "???? ?? ????? ???? ????...",
+    matchingCourses: "????? ?????",
+    popularCourses:"????? ?????",
+    noMatchingCourse:"???? ????? ???? ???? ????",
+    searchCourses:"?????? ???? ????",
+    popular:"?????:",
+    postRequirement:"?? ???? ?????? ????? ???? ????",
     tellUs:
-      "ہمیں بتائیں کہ آپ کیا سیکھنا چاہتے ہیں — ہم آپ کے لیے صحیح استاد تلاش کرنے میں مدد کریں گے۔",
-    oneToOne:"✓ ون آن ون کلاسز",
-    flexibleTimings:"✓ لچکدار اوقات",
-    experiencedTeachers:"✓ تجربہ کار اساتذہ",
-    journeyStarts:"آپ کے سیکھنے کا سفر یہاں سے شروع ہوتا ہے",
-    connectRight:"اپنے مقاصد کے لیے صحیح استاد سے جڑیں۔",
-    classes:"کلاسز",
-    teachers:"اساتذہ",
-    learning:"سیکھنا",
-    exploreSubjects:"مضامین دریافت کریں",
-    whatLearn:"آپ کیا سیکھنا چاہتے ہیں؟",
+      "???? ?????? ?? ?? ??? ?????? ????? ??? � ?? ?? ?? ??? ???? ????? ???? ???? ??? ??? ???? ???",
+    oneToOne:"? ?? ?? ?? ?????",
+    flexibleTimings:"? ?????? ?????",
+    experiencedTeachers:"? ????? ??? ??????",
+    journeyStarts:"?? ?? ?????? ?? ??? ???? ?? ???? ???? ??",
+    connectRight:"???? ????? ?? ??? ???? ????? ?? ?????",
+    classes:"?????",
+    teachers:"??????",
+    learning:"??????",
+    exploreSubjects:"?????? ?????? ????",
+    whatLearn:"?? ??? ?????? ????? ????",
     chooseSubject:
-      "ایک مضمون منتخب کریں اور ایسے اساتذہ تلاش کریں جو آپ کی اپنی رفتار سے سیکھنے میں مدد کر سکیں۔",
-    findTeacher:"استاد تلاش کریں ←",
-    featuredTeachers:"نمایاں اساتذہ",
-    learnExperienced:"تجربہ کار اساتذہ سے سیکھیں",
+      "??? ????? ????? ???? ??? ???? ?????? ???? ???? ?? ?? ?? ???? ????? ?? ?????? ??? ??? ?? ?????",
+    findTeacher:"????? ???? ???? ?",
+    featuredTeachers:"?????? ??????",
+    learnExperienced:"????? ??? ?????? ?? ??????",
     discoverVerified:
-      "تصدیق شدہ اساتذہ کو ان کی مہارت اور فیسیں دیکھ کر تلاش کریں۔",
-    viewAll:"تمام اساتذہ دیکھیں ←",
-    loadingVerified:"تصدیق شدہ اساتذہ لوڈ ہو رہے ہیں...",
+      "????? ??? ?????? ?? ?? ?? ????? ??? ????? ???? ?? ???? ?????",
+    viewAll:"???? ?????? ?????? ?",
+    loadingVerified:"????? ??? ?????? ??? ?? ??? ???...",
     teachersError:
-      "نمایاں اساتذہ لوڈ نہیں ہو سکے۔ براہ کرم صفحہ دوبارہ لوڈ کر کے کوشش کریں۔",
-    noVerified:"ابھی کوئی تصدیق شدہ استاد دستیاب نہیں۔",
-    subjectsNotSpecified:"مضامین متعین نہیں",
-    verified:"✓ تصدیق شدہ",
-    experience:"تجربہ",
-    notSpecified:"متعین نہیں",
-    teachingMode:"تدریس کا طریقہ",
-    languages:"زبانیں",
-    fees:"فیسیں",
-    viewProfile:"پروفائل دیکھیں",
-    simpleProcess:"آسان طریقہ کار",
-    howWorks:"UstaadHub کیسے کام کرتا ہے؟",
-    step1Title:"انتخاب کریں کہ کیا سیکھنا ہے",
+      "?????? ?????? ??? ???? ?? ???? ???? ??? ???? ?????? ??? ?? ?? ???? ?????",
+    noVerified:"???? ???? ????? ??? ????? ?????? ?????",
+    subjectsNotSpecified:"?????? ????? ????",
+    verified:"? ????? ???",
+    experience:"?????",
+    notSpecified:"????? ????",
+    teachingMode:"????? ?? ?????",
+    languages:"??????",
+    fees:"?????",
+    viewProfile:"??????? ??????",
+    tutorSearchPlaceholder:"????? ?? ???? ????? ?? ???? ???? ????...",
+    tutorSearchLabel:"?????? ???? ????",
+    tutorClearSearch:"???? ??? ????",
+    tutorFilterAll:"????",
+    tutorFilterQuran:"???? ? ?????",
+    tutorFilterHifz:"???",
+    tutorFilterAcademic:"??????",
+    tutorFilterIslamic:"????????",
+    tutorFilterLanguages:"??????",
+    tutorResultsCount:"?????? ???",
+    tutorNoResultsTitle:"???? ????? ???? ???",
+    tutorNoResultsHint:"???? ??? ???? ????? ?? ???? ????????",
+    tutorResetFilters:"????? ?? ??? ????",
+    simpleProcess:"???? ????? ???",
+    howWorks:"UstaadHub ???? ??? ???? ???",
+    step1Title:"?????? ???? ?? ??? ?????? ??",
     step1Desc:
-      "قرآن، عربی، زبانیں، اسلامیات یا کوئی اور مضمون منتخب کریں۔",
-    step2Title:"اپنا استاد تلاش کریں",
+      "????? ????? ??????? ???????? ?? ???? ??? ????? ????? ?????",
+    step2Title:"???? ????? ???? ????",
     step2Desc:
-      "اساتذہ کے پروفائلز، تجربہ، درجہ بندی اور فیسیں دیکھیں۔",
-    step3Title:"سیکھنا شروع کریں",
+      "?????? ?? ????????? ?????? ???? ???? ??? ????? ???????",
+    step3Title:"?????? ???? ????",
     step3Desc:
-      "مناسب وقت منتخب کریں اور اپنی ذاتی نوعیت کی کلاسز شروع کریں۔",
-    startToday:"آج ہی سیکھنا شروع کریں",
-    rightTeacher:"اپنے لیے صحیح استاد تلاش کریں",
+      "????? ??? ????? ???? ??? ???? ???? ????? ?? ????? ???? ?????",
+    startToday:"?? ?? ?????? ???? ????",
+    rightTeacher:"???? ??? ???? ????? ???? ????",
     demoDesc:
-      "فیصلہ کرنے سے پہلے ڈیمو کلاس بک کریں اور سیکھنے کا صحیح طریقہ آزمائیں۔",
-    bookDemo:"🎓 ڈیمو کلاس بک کریں",
-    rightsReserved:"© 2026 UstaadHub۔ جملہ حقوق محفوظ ہیں۔",
+      "????? ???? ?? ???? ???? ???? ?? ???? ??? ?????? ?? ???? ????? ????????",
+    bookDemo:"?? ???? ???? ?? ????",
+    rightsReserved:"� 2026 UstaadHub? ???? ???? ????? ????",
     // About section
-    aboutUstaadHub:"ہمارے بارے میں",
-    aboutTitle:"UstaadHub کے بارے میں",
+    aboutUstaadHub:"????? ???? ???",
+    aboutTitle:"UstaadHub ?? ???? ???",
     aboutDescription:
-      "UstaadHub طلباء کو قرآن، عربی، اسلامیات، زبانیں اور مزید مضامین کے لیے مناسب اساتذہ سے جوڑتا ہے۔",
-    aboutStudentsTitle:"طلباء کے لیے",
+      "UstaadHub ????? ?? ????? ????? ????????? ?????? ??? ???? ?????? ?? ??? ????? ?????? ?? ????? ???",
+    aboutStudentsTitle:"????? ?? ???",
     aboutStudents:
-      "طلباء اپنی تعلیمی ضرورت جمع کروا سکتے ہیں اور ہماری ایڈمن ٹیم اس کا جائزہ لے کر انہیں تصدیق شدہ استاد سے ملانے میں مدد کرتی ہے۔",
-    aboutTeachersTitle:"اساتذہ کے لیے",
+      "????? ???? ?????? ????? ??? ???? ???? ??? ??? ????? ????? ??? ?? ?? ????? ?? ?? ????? ????? ??? ????? ?? ????? ??? ??? ???? ???",
+    aboutTeachersTitle:"?????? ?? ???",
     aboutTeachers:
-      "اساتذہ اپنا پروفائل بنا سکتے ہیں اور تصدیق و آن بورڈنگ کے عمل سے گزر کر کلاسز پیش کر سکتے ہیں۔",
+      "?????? ???? ??????? ??? ???? ??? ??? ????? ? ?? ?????? ?? ??? ?? ??? ?? ????? ??? ?? ???? ????",
     aboutNotAutomatic:
-      "استاد کی میچنگ ہماری ایڈمن ٹیم کی مدد سے ہوتی ہے — یہ مکمل طور پر خودکار نہیں ہے۔",
+      "????? ?? ????? ????? ????? ??? ?? ??? ?? ???? ?? � ?? ???? ??? ?? ?????? ???? ???",
     // FAQ section
-    faq:"عام سوالات",
-    faqTitle:"اکثر پوچھے جانے والے سوالات",
-    faqQuestion1:"میں استاد کی درخواست کیسے کر سکتا ہوں؟",
+    faq:"??? ??????",
+    faqTitle:"???? ????? ???? ???? ??????",
+    faqQuestion1:"??? ????? ?? ??????? ???? ?? ???? ????",
     faqAnswer1:
-      "اساتذہ تلاش کریں صفحے پر دستیاب اساتذہ دیکھیں، یا اپنی تعلیمی ضرورت جمع کروائیں۔ ہماری ایڈمن ٹیم آپ کی ضرورت کا جائزہ لے کر آپ کو مناسب تصدیق شدہ استاد سے ملانے میں مدد کرے گی۔",
-    faqQuestion2:"استاد کی میچنگ کیسے ہوتی ہے؟",
+      "?????? ???? ???? ???? ?? ?????? ?????? ??????? ?? ???? ?????? ????? ??? ???????? ????? ????? ??? ?? ?? ????? ?? ????? ?? ?? ?? ?? ????? ????? ??? ????? ?? ????? ??? ??? ??? ???",
+    faqQuestion2:"????? ?? ????? ???? ???? ???",
     faqAnswer2:
-      "میچنگ مکمل طور پر خودکار نہیں ہے۔ آپ کی تعلیمی ضرورت جمع ہونے کے بعد ہماری ایڈمن ٹیم اس کا جائزہ لیتی ہے اور آپ کو اس استاد سے ملانے میں مدد کرتی ہے جس کی مہارت آپ کی ضرورت کے مطابق ہو۔",
-    faqQuestion3:"کیا اساتذہ کی تصدیق ہوتی ہے؟",
+      "????? ???? ??? ?? ?????? ???? ??? ?? ?? ?????? ????? ??? ???? ?? ??? ????? ????? ??? ?? ?? ????? ???? ?? ??? ?? ?? ?? ????? ?? ????? ??? ??? ???? ?? ?? ?? ????? ?? ?? ????? ?? ????? ???",
+    faqQuestion3:"??? ?????? ?? ????? ???? ???",
     faqAnswer3:
-      "جی ہاں، UstaadHub میں وہ اساتذہ شامل ہیں جنہوں نے تصدیق اور آن بورڈنگ کا عمل مکمل کیا ہے۔ آپ ان کے پروفائل اساتذہ تلاش کریں صفحے پر دیکھ سکتے ہیں۔",
-    faqQuestion4:"اپنی ضرورت جمع کروانے کے بعد کیا ہوتا ہے؟",
+      "?? ???? UstaadHub ??? ?? ?????? ???? ??? ????? ?? ????? ??? ?? ?????? ?? ??? ???? ??? ??? ?? ?? ?? ??????? ?????? ???? ???? ???? ?? ???? ???? ????",
+    faqQuestion4:"???? ????? ??? ?????? ?? ??? ??? ???? ???",
     faqAnswer4:
-      "آپ کی تعلیمی ضرورت جمع ہونے کے بعد ہماری ایڈمن ٹیم اس کا جائزہ لیتی ہے۔ اگر مناسب تصدیق شدہ استاد دستیاب ہو تو ہم آپ کو اس سے ملانے میں مدد کرتے ہیں۔ مزید تفصیلات کے لیے آپ سے رابطہ کیا جا سکتا ہے۔",
-    faqQuestion5:"میں استاد کیسے بن سکتا ہوں؟",
+      "?? ?? ?????? ????? ??? ???? ?? ??? ????? ????? ??? ?? ?? ????? ???? ??? ??? ????? ????? ??? ????? ?????? ?? ?? ?? ?? ?? ?? ?? ????? ??? ??? ???? ???? ???? ??????? ?? ??? ?? ?? ????? ??? ?? ???? ???",
+    faqQuestion5:"??? ????? ???? ?? ???? ????",
     faqAnswer5:
-      "استاد کی رجسٹریشن رجسٹر صفحے پر دستیاب ہے۔ اساتذہ پروفائل بنا سکتے ہیں اور کلاسز شروع کرنے سے پہلے تصدیق و آن بورڈنگ کے عمل سے گزرتے ہیں۔",
-    faqQuestion6:"مدد کے لیے UstaadHub سے کیسے رابطہ کروں؟",
+      "????? ?? ???????? ????? ???? ?? ?????? ??? ?????? ??????? ??? ???? ??? ??? ????? ???? ???? ?? ???? ????? ? ?? ?????? ?? ??? ?? ????? ????",
+    faqQuestion6:"??? ?? ??? UstaadHub ?? ???? ????? ?????",
     faqAnswer6:
-      "آپ WhatsApp کے ذریعے یا اس صفحے کے رابطہ سیکشن سے UstaadHub کی معاونت حاصل کر سکتے ہیں۔ ہماری ٹیم کسی بھی سوال یا مسئلے میں مدد کے لیے موجود ہے۔",
+      "?? WhatsApp ?? ????? ?? ?? ???? ?? ????? ????? ?? UstaadHub ?? ?????? ???? ?? ???? ???? ????? ??? ??? ??? ???? ?? ????? ??? ??? ?? ??? ????? ???",
     // Contact section
-    contactSupport:"رابطہ",
-    contactTitle:"رابطہ اور معاونت",
+    contactSupport:"?????",
+    contactTitle:"????? ??? ??????",
     contactDescription:
-      "کوئی سوال ہے یا مدد چاہیے؟ ہماری ٹیم آپ کی معاونت کے لیے موجود ہے۔",
-    contactWhatsApp:"WhatsApp پر ہم سے رابطہ کریں",
-    contactRequirement:"اپنی تعلیمی ضرورت جمع کروائیں",
-    contactBrowseTeachers:"اساتذہ دیکھیں",
-    contactNeedHelp:"مدد چاہیے؟ UstaadHub کی معاونت سے رابطہ کریں۔",
+      "???? ???? ?? ?? ??? ?????? ????? ??? ?? ?? ?????? ?? ??? ????? ???",
+    contactWhatsApp:"WhatsApp ?? ?? ?? ????? ????",
+    contactRequirement:"???? ?????? ????? ??? ???????",
+    contactBrowseTeachers:"?????? ??????",
+    contactNeedHelp:"??? ?????? UstaadHub ?? ?????? ?? ????? ?????",
     // Footer
-    footerExplore:"دریافت کریں",
-    footerCompany:"کمپنی",
-    footerForTeachers:"اساتذہ کے لیے",
-    footerLegal:"قانونی معلومات",
-    footerFollow:"UstaadHub کو فالو کریں",
-    footerSocialYoutube:"UstaadHub یوٹیوب پر",
-    footerSocialFacebook:"UstaadHub فیس بک پر",
-    footerSocialInstagram:"UstaadHub انسٹاگرام پر",
+    footerExplore:"?????? ????",
+    footerCompany:"?????",
+    footerForTeachers:"?????? ?? ???",
+    footerLegal:"?????? ???????",
+    footerFollow:"UstaadHub ?? ???? ????",
+    footerSocialYoutube:"UstaadHub ?????? ??",
+    footerSocialFacebook:"UstaadHub ??? ?? ??",
+    footerSocialInstagram:"UstaadHub ????????? ??",
     footerDescription:
-      "UstaadHub طلباء کو آن لائن ون ٹو ون کلاسز کے لیے مناسب اور تصدیق شدہ اساتذہ تلاش کرنے میں مدد کرتا ہے۔",
-    footerFindTeachers:"اساتذہ تلاش کریں",
-    footerRequestTeacher:"استاد کی درخواست",
-    footerHowItWorks:"یہ کیسے کام کرتا ہے؟",
-    footerSubjects:"مضامین",
-    footerAbout:"ہمارے بارے میں",
-    footerFaq:"عام سوالات",
-    footerContact:"رابطہ",
-    footerBecomeTeacher:"استاد بنیں",
-    footerPrivacyPolicy:"رازداری کی پالیسی",
-    footerTermsConditions:"شرائط و شرایط",
+      "UstaadHub ????? ?? ?? ???? ?? ?? ?? ????? ?? ??? ????? ??? ????? ??? ?????? ???? ???? ??? ??? ???? ???",
+    footerFindTeachers:"?????? ???? ????",
+    footerRequestTeacher:"????? ?? ???????",
+    footerHowItWorks:"?? ???? ??? ???? ???",
+    footerSubjects:"??????",
+    footerAbout:"????? ???? ???",
+    footerFaq:"??? ??????",
+    footerContact:"?????",
+    footerBecomeTeacher:"????? ????",
+    footerPrivacyPolicy:"??????? ?? ??????",
+    footerTermsConditions:"????? ? ?????",
   },
 };
 
 const categoryUrdu: Record<string, string> = {
-  "Quran & Tajweed": "قرآن و تجوید",
-  "Hifz-ul-Quran": "حفظ القرآن",
-  "Islamic Studies": "اسلامیات",
-  "Dua & Salah": "دعا و نماز",
-  "Arabic": "عربی",
-  "English": "انگریزی",
-  "Hindi": "ہندی",
-  "Urdu": "اردو",
+  "Quran & Tajweed": "???? ? ?????",
+  "Hifz-ul-Quran": "??? ??????",
+  "Islamic Studies": "????????",
+  "Dua & Salah": "??? ? ????",
+  "Arabic": "????",
+  "English": "???????",
+  "Hindi": "????",
+  "Urdu": "????",
 };
 
 const categories = [
-  ["📖", "Quran & Tajweed"],
-  ["🌙", "Hifz-ul-Quran"],
-  ["🕌", "Islamic Studies"],
-  ["🕋", "Dua & Salah"],
-  ["📚", "Arabic"],
-  ["🇬🇧", "English"],
-  ["🇮🇳", "Hindi"],
-  ["📝", "Urdu"],
+  ["??", "Quran & Tajweed"],
+  ["??", "Hifz-ul-Quran"],
+  ["??", "Islamic Studies"],
+  ["??", "Dua & Salah"],
+  ["??", "Arabic"],
+  ["????", "English"],
+  ["????", "Hindi"],
+  ["??", "Urdu"],
 ];
+
+type TutorCategoryKey = "all" | "quran" | "hifz" | "academic" | "islamic" | "languages";
+
+const TUTOR_CATEGORY_FILTERS: readonly TutorCategoryKey[] = [
+  "all",
+  "quran",
+  "hifz",
+  "academic",
+  "islamic",
+  "languages",
+];
+
+const TUTOR_CATEGORY_KEYWORDS: Record<Exclude<TutorCategoryKey, "all">, string[]> = {
+  quran: ["quran", "tajweed", "nazra", "qaida", "qar", "tajwid", "tilawat"],
+  hifz: ["hifz", "hifz-e", "hifz-ul", "memorization", "huffaz", "hifaz"],
+  academic: ["math", "physics", "chemistry", "biology", "science", "academic", "school", "class", "cbse", "neet", "jee", "account", "economic", "computer", "darse nizami", "aalim"],
+  islamic: ["islamic", "fiqh", "hadith", "tafseer", "tafsir", "seerah", "aqeedah", "salah", "dua", "farz uloom", "deen"],
+  languages: ["arabic", "english", "urdu", "hindi", "language", "spoken", "grammar"],
+};
+
+function teacherMatchesTutorCategory(teacher: TeacherProfile, category: TutorCategoryKey): boolean {
+  if (category === "all") return true;
+  const keywords = TUTOR_CATEGORY_KEYWORDS[category];
+  const haystack = [
+    teacher.full_name ?? "",
+    (teacher.subjects || []).join(" "),
+    (teacher.languages || []).join(" "),
+    teacher.experience ?? "",
+    teacher.teaching_mode ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  return keywords.some((keyword) => haystack.includes(keyword));
+}
 
 const MAX_RETRIES = 3;
 const REQUEST_TIMEOUT = 10000;
@@ -427,9 +487,46 @@ export default function Home({ locale = "en" }: HomeProps) {
   const [verifiedTeacherCount, setVerifiedTeacherCount] = useState(0);
   const [teachersLoading, setTeachersLoading] = useState(true);
   const [teachersError, setTeachersError] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState("");
   const [showCourseList, setShowCourseList] = useState(false);
   const courseSearchRef = useRef<HTMLDivElement>(null);
+  const [tutorQuery, setTutorQuery] = useState("");
+  const [tutorCategory, setTutorCategory] = useState<TutorCategoryKey>("all");
+
+  // Lightweight 60fps scroll reveals: one shared IntersectionObserver adds
+  // `.is-visible` to every `.reveal` element once. CSS animates only
+  // opacity + transform, so scrolling stays on the compositor thread.
+  // No animation library is needed, keeping the homepage bundle small.
+  const revealRootRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const root = revealRootRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") {
+      root?.querySelectorAll(".reveal").forEach((el) => {
+        el.classList.add("is-visible");
+      });
+      return;
+    }
+    const targets = Array.from(root.querySelectorAll(".reveal"));
+    if (targets.length === 0) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      targets.forEach((el) => el.classList.add("is-visible"));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
+    );
+    targets.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [teachersLoading, locale]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -559,61 +656,189 @@ function selectCourse(course: string) {
     };
   }, []);
 
+  const normalizedTutorQuery = tutorQuery.trim().toLowerCase();
+
+  const filteredTutors = useMemo(() => {
+    return featuredTeachers.filter((teacher) => {
+      if (!teacherMatchesTutorCategory(teacher, tutorCategory)) return false;
+      if (!normalizedTutorQuery) return true;
+      const haystack = [
+        teacher.full_name ?? "",
+        (teacher.subjects || []).join(" "),
+        (teacher.languages || []).join(" "),
+        teacher.experience ?? "",
+        teacher.teaching_mode ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return normalizedTutorQuery
+        .split(/\s+/)
+        .filter(Boolean)
+        .every((token) => haystack.includes(token));
+    });
+  }, [featuredTeachers, tutorCategory, normalizedTutorQuery]);
+
+  const tutorFiltersActive = normalizedTutorQuery.length > 0 || tutorCategory !== "all";
+
+  function resetTutorFilters() {
+    setTutorQuery("");
+    setTutorCategory("all");
+  }
+
+  function tutorCategoryLabel(key: TutorCategoryKey): string {
+    switch (key) {
+      case "all":
+        return t.tutorFilterAll;
+      case "quran":
+        return t.tutorFilterQuran;
+      case "hifz":
+        return t.tutorFilterHifz;
+      case "academic":
+        return t.tutorFilterAcademic;
+      case "islamic":
+        return t.tutorFilterIslamic;
+      case "languages":
+        return t.tutorFilterLanguages;
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-white text-gray-900">
+    <main ref={revealRootRef} className="min-h-screen bg-white text-gray-900">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeSchema) }}
       />
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5 sm:py-4">
-          <a href="#" className="whitespace-nowrap text-lg font-bold text-blue-700 sm:text-2xl">
+      <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div className="landing-container flex min-h-16 items-center justify-between gap-3 py-3">
+          <a
+            href="#"
+            className="shrink-0 whitespace-nowrap text-xl font-extrabold tracking-tight text-blue-700 sm:text-2xl"
+          >
             UstaadHub
           </a>
 
-          <div className="hidden items-center gap-6 md:flex lg:gap-8">
-            <a href="#teachers" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+          <div className="hidden items-center gap-6 lg:flex xl:gap-8">
+            <a
+              href="#teachers"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
               {t.findTeachers}
             </a>
-            <a href="#subjects" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+            <a
+              href="#subjects"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
               {t.subjects}
             </a>
-            <a href="#how" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+            <a
+              href="#how"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
               {t.howItWorks}
             </a>
-            <a href="#about" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+            <a
+              href="#about"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
               {t.footerAbout}
             </a>
-            <a href="#faq" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+            <a
+              href="#faq"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
               {t.footerFaq}
             </a>
-            <a href="#contact" className="whitespace-nowrap text-gray-700 hover:text-blue-700">
+            <a
+              href="#contact"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
               {t.footerContact}
             </a>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
-  <LanguageSwitcher />
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
 
-          <a
-    href="/login"
-              className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-gray-100 sm:px-4 sm:py-2 sm:text-base"
+            <a
+              href="/login"
+              className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 md:block"
             >
               {t.login}
             </a>
 
             <a
               href="/register"
-              className="whitespace-nowrap rounded-lg bg-blue-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-800 sm:px-5 sm:py-2.5 sm:text-base"
+              className="whitespace-nowrap rounded-lg bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:px-5 sm:py-2.5 sm:text-[15px]"
             >
               {t.joinAsTeacher}
             </a>
+
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen((open) => !open)}
+              aria-expanded={mobileNavOpen}
+              aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-100 lg:hidden"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                aria-hidden="true"
+                className="h-5 w-5"
+              >
+                {mobileNavOpen ? (
+                  <path d="M6 6l12 12M18 6L6 18" />
+                ) : (
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
+
+        {mobileNavOpen && (
+          <div className="border-t border-slate-100 bg-white lg:hidden">
+            <div className="landing-container flex flex-col gap-1 py-3">
+              {[
+                { href: "#teachers", label: t.findTeachers },
+                { href: "#subjects", label: t.subjects },
+                { href: "#how", label: t.howItWorks },
+                { href: "#about", label: t.footerAbout },
+                { href: "#faq", label: t.footerFaq },
+                { href: "#contact", label: t.footerContact },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileNavOpen(false)}
+                  className="rounded-lg px-3 py-2.5 text-[15px] font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {item.label}
+                </a>
+              ))}
+              <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-3">
+                <div className="sm:hidden">
+                  <LanguageSwitcher />
+                </div>
+                <a
+                  href="/login"
+                  className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-100 md:hidden"
+                >
+                  {t.login}
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
-      <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        {/* Static background — soft gradient blobs and a faint grid, purely decorative */}
+      <section id="hero" className="relative bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        {/* Static background � soft gradient blobs and a faint grid, purely decorative */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -624,77 +849,94 @@ function selectCourse(course: string) {
           <div className="hero-grid-overlay absolute inset-0" />
         </div>
 
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-5 pb-12 pt-10 sm:pt-12 md:grid-cols-2 md:items-center md:gap-12 md:pb-12 md:pt-8">
+        <div className="landing-container relative grid gap-10 pb-12 pt-10 sm:pt-12 md:grid-cols-2 md:items-center md:gap-10 md:pb-16 md:pt-8 lg:gap-14">
       {/* HERO */}
-  <div className={isUrdu ? "min-w-0" : undefined}>
+  <div className="min-w-0">
 
-            <div className="hero-reveal mb-4 inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+            <div className="hero-reveal mb-4 inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-xs font-semibold text-blue-800 sm:text-sm">
               {t.heroBadge}
             </div>
 
             <h1
               className={`hero-reveal hero-delay-1 text-balance ${
                 isUrdu
-                  ? "text-4xl font-extrabold leading-normal tracking-normal md:text-[2rem] lg:text-[2.25rem] xl:text-[2.5rem]"
-                  : "text-5xl font-extrabold leading-[1.15] tracking-tight md:text-[2.25rem] lg:text-[2.5rem] xl:text-[3rem]"
+                  ? "text-3xl font-extrabold leading-normal tracking-normal sm:text-4xl md:text-[2rem] lg:text-[2.25rem] xl:text-[2.5rem]"
+                  : "text-4xl font-extrabold leading-[1.12] tracking-tight sm:text-5xl md:text-[2.25rem] lg:text-[2.5rem] xl:text-[3rem]"
               }`}
             >
               {t.heroTitleA}
-              <span className="text-blue-700">{isUrdu ? " استاد " : " Ustaad "}</span>
+              <span className="text-blue-700">{isUrdu ? " ????? " : " Ustaad "}</span>
               {t.heroTitleC}
             </h1>
 
             <p
               className={`hero-reveal hero-delay-2 ${
                 isUrdu
-                  ? "mt-3 max-w-xl text-lg leading-9 text-gray-600"
-                  : "mt-3 max-w-xl text-lg leading-8 text-gray-600"
+                  ? "mt-3 max-w-xl text-base leading-8 text-slate-600 sm:text-lg sm:leading-9"
+                  : "mt-3 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8"
               }`}
             >
               {t.heroDescription}
             </p>
 
             {/* PRIMARY + SECONDARY CTA */}
-            <div className="hero-reveal hero-delay-3 mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="hero-reveal hero-delay-3 mt-4 flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href="/teachers"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-blue-700/20 transition hover:-translate-y-0.5 hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:text-lg"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 text-base font-bold text-white shadow-lg shadow-blue-700/20 transition hover:-translate-y-0.5 hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto sm:py-3.5 sm:text-lg"
               >
                 {t.heroCtaPrimary}
-                <span aria-hidden="true">→</span>
+                <span aria-hidden="true">?</span>
               </Link>
 
               <Link
                 href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
-                className="inline-flex items-center justify-center rounded-xl border-2 border-blue-700 bg-white/80 px-6 py-3.5 text-base font-bold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:text-lg"
+                className="inline-flex w-full items-center justify-center rounded-xl border-2 border-blue-700 bg-white/90 px-6 py-3 text-base font-bold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto sm:py-3.5 sm:text-lg"
               >
                 {t.heroCtaSecondary}
               </Link>
             </div>
 
-            <p className="hero-reveal hero-delay-4 mt-2 text-sm text-gray-500">
+            <p className="hero-reveal hero-delay-4 mt-1 text-sm text-slate-500">
               {t.tellUs}
             </p>
 
             {/* COURSE SEARCH */}
-            <div className="hero-reveal hero-delay-5 mt-4 max-w-4xl">
-              <div className="rounded-2xl bg-white p-3 shadow-xl ring-1 ring-gray-200 sm:p-4">
+            <div
+              className={`hero-reveal hero-delay-5 relative mt-4 w-full max-w-2xl ${showCourseList ? "z-30" : ""}`}
+            >
+              <div
+                ref={courseSearchRef}
+                className="relative z-30 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200 sm:p-4"
+              >
 
                 <div className="flex flex-col gap-3 sm:flex-row">
 
-                  {/* SEARCH INPUT + COURSE DROPDOWN */}
-                  <div
-                    ref={courseSearchRef}
-                    className="relative min-w-0 flex-1"
-                  >
-
+                  {/* SEARCH INPUT */}
+                  <div className="relative min-w-0 flex-1">
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400">
-                        🔍
-                      </span>
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-5 w-5"
+                          >
+                            <circle cx="11" cy="11" r="7" />
+                            <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                          </svg>
+                        </span>
 
                       <input
                         type="text"
+                        role="combobox"
+                        aria-expanded={showCourseList}
+                        aria-controls="hero-course-listbox"
+                        aria-autocomplete="list"
                         value={courseSearch}
                         onChange={(e) => {
                           setCourseSearch(e.target.value);
@@ -702,52 +944,9 @@ function selectCourse(course: string) {
                         }}
                         onFocus={() => setShowCourseList(true)}
                         placeholder={t.searchPlaceholder}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-4 pl-12 pr-4 text-base outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:text-lg"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-4 text-base text-slate-900 outline-none transition focus:border-blue-600 focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-600 sm:text-lg"
                       />
                     </div>
-
-                    {/* COURSE SUGGESTIONS */}
-                    {showCourseList && (
-                      <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
-
-                        <div className="border-b bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-600">
-                          {courseSearch.trim()
-                            ? t.matchingCourses
-                            : t.popularCourses}
-                        </div>
-
-                        <div className="max-h-64 overflow-y-auto p-2">
-
-                          {filteredCourses.length > 0 ? (
-                            filteredCourses.map((course) => (
-                              <button
-                                key={course}
-                                type="button"
-                                onClick={() => {
-                                  selectCourse(course);
-                                  setShowCourseList(false);
-                                }}
-                                className="flex w-full items-center rounded-lg px-4 py-3 text-left text-sm font-medium text-gray-800 transition hover:bg-blue-50 hover:text-blue-700 sm:text-base"
-                              >
-                                <span className="mr-3 text-lg">
-                                  📚
-                                </span>
-
-                                <span className="min-w-0 flex-1 truncate">
-                                  {isUrdu ? (courseUrduLabels[course] ?? course) : course}
-                                </span>
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-4 py-6 text-center text-sm text-gray-500">
-                              {t.noMatchingCourse}
-                            </div>
-                          )}
-
-                        </div>
-                      </div>
-                    )}
-
                   </div>
 
                   {/* SEARCH BUTTON */}
@@ -760,12 +959,74 @@ function selectCourse(course: string) {
                       }
                     }}
                     disabled={filteredCourses.length === 0}
-                    className="w-full rounded-xl bg-blue-700 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:text-lg"
+                    className="w-full shrink-0 rounded-xl bg-blue-700 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto sm:text-lg"
                   >
                     {t.searchCourses}
                   </button>
 
                 </div>
+
+                {/* CUSTOM FLOATING COURSE SUGGESTIONS � full card width, floats above tags below */}
+                {showCourseList && (
+                  <div
+                    className={`hero-search-dropdown is-visible absolute left-0 right-0 top-[calc(100%+8px)] z-50 w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl shadow-[0_20px_50px_rgba(15,23,42,0.15)] backdrop-blur-xl`}
+                    ref={courseSearchRef}
+                  >
+
+                    <div className="px-4 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      {courseSearch.trim()
+                        ? t.matchingCourses
+                        : t.popularCourses}
+                    </div>
+
+                    <div
+                      id="hero-course-listbox"
+                      role="listbox"
+                      className="custom-scrollbar max-h-64 overflow-y-auto p-2">
+
+                      {filteredCourses.length > 0 ? (
+                        filteredCourses.map((course) => (
+                          <button
+                            key={course}
+                            type="button"
+                            role="option"
+                            aria-selected={false}
+                            onClick={() => {
+                              selectCourse(course);
+                              setShowCourseList(false);
+                            }}
+                            className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm text-slate-700 transition-all duration-150 hover:bg-slate-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 sm:text-[15px]"
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                              <svg
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.8}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-4 w-4"
+                              >
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                              </svg>
+                            </span>
+
+                            <span className="min-w-0 flex-1 truncate font-medium">
+                              {isUrdu ? (courseUrduLabels[course] ?? course) : course}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-6 text-center text-sm text-slate-500">
+                          {t.noMatchingCourse}
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                )}
 
                 {/* POPULAR COURSES */}
                 <div className="mt-3 flex flex-wrap items-center gap-2 px-1 text-sm">
@@ -799,7 +1060,7 @@ function selectCourse(course: string) {
             </div>
 
           </div>
-          {/* HERO VISUAL — the existing UstaadHub screenshots presented as a website preview */}
+          {/* HERO VISUAL � the existing UstaadHub screenshots presented as a website preview */}
           <div className="hero-reveal hero-delay-3 relative mx-auto w-full max-w-md md:max-w-none">
             {/* soft ambient glow behind the preview (decorative only) */}
             <div
@@ -813,34 +1074,34 @@ function selectCourse(course: string) {
               autoplayInterval={5200}
             />
 
-            {/* compact highlights — no longer floating over the screenshot */}
+            {/* compact highlights � no longer floating over the screenshot */}
             <div className="relative mt-4">
-              <div className="grid grid-cols-3 gap-2 rounded-2xl border border-blue-100/70 bg-white/70 p-2.5 text-center backdrop-blur sm:gap-3 sm:p-3">
+              <div className="grid grid-cols-3 gap-2 rounded-2xl border border-blue-100/70 bg-white/80 p-2.5 text-center shadow-sm backdrop-blur sm:gap-3 sm:p-3">
                 <div>
                   <div className="text-base font-bold text-blue-700 sm:text-lg">1:1</div>
-                  <div className="mt-0.5 text-[11px] text-gray-500">{t.classes}</div>
+                  <div className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{t.classes}</div>
                 </div>
 
                 <div>
                   <div className="text-base font-bold text-blue-700 sm:text-lg">
                     {verifiedTeacherCount}+
                   </div>
-                  <div className="mt-0.5 text-[11px] text-gray-500">{t.teachers}</div>
+                  <div className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{t.teachers}</div>
                 </div>
 
                 <div>
                   <div className="text-base font-bold text-blue-700 sm:text-lg">24/7</div>
-                  <div className="mt-0.5 text-[11px] text-gray-500">{t.learning}</div>
+                  <div className="mt-0.5 text-[11px] text-slate-500 sm:text-xs">{t.learning}</div>
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="flex items-start gap-2 rounded-xl border border-blue-100/70 bg-white/70 px-3 py-2">
                   <span
                     aria-hidden="true"
                     className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-100 text-xs font-bold text-blue-700"
                   >
-                    ✓
+                    ?
                   </span>
 
                   <div className="min-w-0">
@@ -856,7 +1117,7 @@ function selectCourse(course: string) {
                     aria-hidden="true"
                     className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-100 text-sm text-blue-700"
                   >
-                    ⏰
+                    ?
                   </span>
 
                   <div className="min-w-0">
@@ -889,31 +1150,31 @@ function selectCourse(course: string) {
       </section>
 
       {/* CATEGORIES */}
-      <section id="subjects" className="py-20">
-        <div className="mx-auto max-w-7xl px-5">
+      <section id="subjects" className="bg-white py-14 sm:py-16 lg:py-20">
+        <div className="landing-container">
           <div className="text-center">
-            <p className="font-semibold text-blue-700">{t.exploreSubjects}</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.exploreSubjects}</p>
 
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
               {t.whatLearn}
             </h2>
 
-            <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+            <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-7 text-slate-600 sm:text-base">
               {t.chooseSubject}
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {categories.map(([icon, title]) => (
               <div
                 key={title}
-                className="group cursor-pointer rounded-2xl border border-gray-200 bg-white p-6 transition hover:-translate-y-1 hover:border-blue-300 hover:shadow-lg"
+                className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-1 hover:border-blue-300 hover:shadow-lg sm:p-6"
               >
-                <div className="text-4xl">{icon}</div>
+                <div className="text-3xl sm:text-4xl">{icon}</div>
 
-                <h3 className="mt-4 font-bold">{isUrdu ? (categoryUrdu[title] ?? title) : title}</h3>
+                <h3 className="mt-4 text-[15px] font-bold text-slate-900 sm:text-base">{isUrdu ? (categoryUrdu[title] ?? title) : title}</h3>
 
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-xs text-slate-500 sm:text-sm">
                   {t.findTeacher}
                 </p>
               </div>
@@ -923,73 +1184,179 @@ function selectCourse(course: string) {
       </section>
 
       {/* FEATURED TEACHERS */}
-      <section id="teachers" className="bg-gray-50 py-20">
-        <div className="mx-auto max-w-7xl px-5">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <p className="font-semibold text-blue-700">
+      <section id="teachers" className="bg-slate-50 py-14 sm:py-16 lg:py-20">
+        <div className="landing-container">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
                 {t.featuredTeachers}
               </p>
 
-              <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
                 {t.learnExperienced}
               </h2>
 
-              <p className="mt-3 text-gray-600">
+              <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600 sm:text-base">
                 {t.discoverVerified}
               </p>
             </div>
 
             <Link
               href="/teachers"
-              className="w-fit rounded-lg font-semibold text-blue-700 hover:text-blue-900"
+              className="inline-flex w-fit shrink-0 items-center gap-1 rounded-lg px-1 py-1 font-semibold text-blue-700 transition hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
               {t.viewAll}
+              <span aria-hidden="true">?</span>
             </Link>
           </div>
 
+          {/* SEARCH & FILTER */}
+          <div className="mt-8 sm:mt-10">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <label htmlFor="tutor-search" className="sr-only">
+                {t.tutorSearchLabel}
+              </label>
+              <div className="relative">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
+                </span>
+                <input
+                  id="tutor-search"
+                  type="search"
+                  value={tutorQuery}
+                  onChange={(event) => setTutorQuery(event.target.value)}
+                  placeholder={t.tutorSearchPlaceholder}
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-11 text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-0"
+                />
+                {tutorQuery.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setTutorQuery("")}
+                    aria-label={t.tutorClearSearch}
+                    title={t.tutorClearSearch}
+                    className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4" aria-hidden="true">
+                      <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              <div
+                role="tablist"
+                aria-label={t.tutorSearchLabel}
+                className="no-scrollbar -mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1"
+              >
+                {TUTOR_CATEGORY_FILTERS.map((key) => {
+                  const active = tutorCategory === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setTutorCategory(key)}
+                      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+                        active
+                          ? "bg-blue-700 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      {tutorCategoryLabel(key)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {!teachersLoading && !teachersError && (
+                <p aria-live="polite" className="mt-3 text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">{filteredTutors.length}</span>{" "}
+                  {t.tutorResultsCount}
+                </p>
+              )}
+            </div>
+          </div>
+
           {teachersLoading ? (
-            <div className="mt-10 rounded-2xl bg-white p-12 text-center shadow-sm">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-600 shadow-sm sm:mt-10 sm:p-12">
               {t.loadingVerified}
             </div>
           ) : teachersError ? (
-            <div className="mt-10 rounded-2xl border border-red-200 bg-red-50 p-12 text-center text-red-700">
+            <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-10 text-center text-red-700 sm:mt-10 sm:p-12">
               {isUrdu ? t.teachersError : teachersError}
             </div>
           ) : featuredTeachers.length === 0 ? (
-            <div className="mt-10 rounded-2xl bg-white p-12 text-center shadow-sm">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-600 shadow-sm sm:mt-10 sm:p-12">
               {t.noVerified}
             </div>
+          ) : filteredTutors.length === 0 ? (
+            <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm sm:mt-10 sm:p-12">
+              <div
+                aria-hidden="true"
+                className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                  <path d="M8.5 11h5" />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-lg font-bold text-slate-900">
+                {normalizedTutorQuery
+                  ? `${t.tutorNoResultsTitle} for '${tutorQuery.trim()}'`
+                  : t.tutorNoResultsTitle}
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                {t.tutorNoResultsHint}
+              </p>
+              {tutorFiltersActive && (
+                <button
+                  type="button"
+                  onClick={resetTutorFilters}
+                  className="mt-5 inline-flex items-center justify-center rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                >
+                  {t.tutorResetFilters}
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="mt-10 grid gap-6 md:grid-cols-3">
-              {featuredTeachers.map((teacher) => {
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+              {filteredTutors.map((teacher) => {
                 const weeklyFee = formatFee(teacher.fee_weekly, "week");
                 const monthlyFee = formatFee(teacher.fee_monthly, "month");
 
                 return (
                   <div
                     key={teacher.id}
-                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
                   >
-                    <div className="flex items-center gap-4 p-6">
+                    <div className="flex items-center gap-4 p-5 sm:p-6">
                       {teacher.profile_photo_url ? (
                         <img
                           src={teacher.profile_photo_url}
                           alt={teacher.full_name || "Teacher"}
-                          className="h-20 w-20 shrink-0 rounded-full object-cover"
+                          className="h-16 w-16 shrink-0 rounded-full object-cover sm:h-20 sm:w-20"
                         />
                       ) : (
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-700">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-700 sm:h-20 sm:w-20 sm:text-xl">
                           {getInitials(teacher.full_name)}
                         </div>
                       )}
 
                       <div className="min-w-0">
-                        <h3 className="truncate text-lg font-bold">
+                        <h3 className="truncate text-base font-bold text-slate-900 sm:text-lg">
                           {teacher.full_name || "Ustaad"}
                         </h3>
 
-                        <p className="mt-1 text-sm text-blue-700">
+                        <p className="mt-1 truncate text-sm text-blue-700">
                           {(teacher.subjects || []).slice(0, 2).join(" & ") ||
                             (isUrdu ? t.subjectsNotSpecified : "Subjects not specified")}
                         </p>
@@ -1000,24 +1367,24 @@ function selectCourse(course: string) {
                       </div>
                     </div>
 
-                    <div className="border-t px-6 py-5">
+                    <div className="flex flex-1 flex-col border-t border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
                       <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-gray-500">{t.experience}</span>
-                        <span className="text-right font-semibold">
+                        <span className="shrink-0 text-slate-500">{t.experience}</span>
+                        <span className="min-w-0 text-right font-semibold text-slate-800">
                           {teacher.experience || (isUrdu ? t.notSpecified : "Not specified")}
                         </span>
                       </div>
 
                       <div className="mt-3 flex justify-between gap-4 text-sm">
-                        <span className="text-gray-500">{t.teachingMode}</span>
-                        <span className="text-right font-semibold">
+                        <span className="shrink-0 text-slate-500">{t.teachingMode}</span>
+                        <span className="min-w-0 text-right font-semibold text-slate-800">
                           {teacher.teaching_mode || (isUrdu ? t.notSpecified : "Not specified")}
                         </span>
                       </div>
 
                       <div className="mt-3 flex justify-between gap-4 text-sm">
-                        <span className="text-gray-500">{t.languages}</span>
-                        <span className="text-right font-semibold">
+                        <span className="shrink-0 text-slate-500">{t.languages}</span>
+                        <span className="min-w-0 text-right font-semibold text-slate-800">
                           {(teacher.languages || []).join(", ") ||
                             (isUrdu ? t.notSpecified : "Not specified")}
                         </span>
@@ -1025,19 +1392,19 @@ function selectCourse(course: string) {
 
                       {(weeklyFee || monthlyFee) && (
                         <div className="mt-3 flex justify-between gap-4 text-sm">
-                          <span className="text-gray-500">{t.fees}</span>
-                          <span className="text-right font-semibold">
+                          <span className="shrink-0 text-slate-500">{t.fees}</span>
+                          <span className="min-w-0 text-right font-semibold text-slate-800">
                             {[weeklyFee, monthlyFee]
                               .filter(Boolean)
-                              .join(" · ")}
+                              .join(" � ")}
                           </span>
                         </div>
                       )}
 
-                      <div className="mt-5 flex items-center justify-end">
+                      <div className="mt-5 flex items-center justify-end pt-1">
                         <Link
                           href={`/teachers/${teacher.id}`}
-                          className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800"
+                          className="inline-flex w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 sm:w-auto"
                         >
                           {t.viewProfile}
                         </Link>
@@ -1052,17 +1419,17 @@ function selectCourse(course: string) {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="py-20">
-        <div className="mx-auto max-w-6xl px-5">
-          <div className="text-center">
-            <p className="font-semibold text-blue-700">{t.simpleProcess}</p>
+      <section id="how" className="bg-white py-14 sm:py-16 lg:py-20">
+        <div className="landing-container mx-auto max-w-6xl">
+          <div className="reveal text-center">
+            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.simpleProcess}</p>
 
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
               {t.howWorks}
             </h2>
           </div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 md:grid-cols-3">
             {[
               [
                 "01",
@@ -1079,15 +1446,18 @@ function selectCourse(course: string) {
                 t.step3Title,
                 t.step3Desc,
               ],
-            ].map(([number, title, description]) => (
-              <div key={number} className="text-center">
+            ].map(([number, title, description], index) => (
+              <div
+                key={number}
+                className={`reveal text-center ${index === 1 ? "reveal-delay-1" : index === 2 ? "reveal-delay-2" : ""}`}
+              >
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-700 text-xl font-bold text-white">
                   {number}
                 </div>
 
-                <h3 className="mt-5 text-xl font-bold">{title}</h3>
+                <h3 className="mt-5 text-lg font-bold text-slate-900 sm:text-xl">{title}</h3>
 
-                <p className="mt-3 leading-7 text-gray-600">{description}</p>
+                <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-[15px]">{description}</p>
               </div>
             ))}
           </div>
@@ -1095,33 +1465,33 @@ function selectCourse(course: string) {
       </section>
 
       {/* ABOUT */}
-      <section id="about" className="bg-gray-50 py-20">
-        <div className="mx-auto max-w-6xl px-5">
+      <section id="about" className="bg-slate-50 py-14 sm:py-16 lg:py-20">
+        <div className="landing-container mx-auto max-w-6xl">
           <div className="text-center">
-            <p className="font-semibold text-blue-700">{t.aboutUstaadHub}</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.aboutUstaadHub}</p>
 
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
               {t.aboutTitle}
             </h2>
 
-            <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+            <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-7 text-slate-600 sm:text-base">
               {t.aboutDescription}
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8">
-              <h3 className="text-xl font-bold">{t.aboutStudentsTitle}</h3>
+          <div className="mt-10 grid gap-4 sm:gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7 lg:p-8">
+              <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{t.aboutStudentsTitle}</h3>
 
-              <p className="mt-3 leading-7 text-gray-600">
+              <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-[15px]">
                 {t.aboutStudents}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8">
-              <h3 className="text-xl font-bold">{t.aboutTeachersTitle}</h3>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7 lg:p-8">
+              <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{t.aboutTeachersTitle}</h3>
 
-              <p className="mt-3 leading-7 text-gray-600">
+              <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-[15px]">
                 {t.aboutTeachers}
               </p>
             </div>
@@ -1134,17 +1504,17 @@ function selectCourse(course: string) {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-20">
-        <div className="mx-auto max-w-3xl px-5">
+      <section id="faq" className="bg-white py-14 sm:py-16 lg:py-20">
+        <div className="landing-container mx-auto max-w-3xl">
           <div className="text-center">
-            <p className="font-semibold text-blue-700">{t.faq}</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.faq}</p>
 
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
               {t.faqTitle}
             </h2>
           </div>
 
-          <div className="mt-10 space-y-3">
+          <div className="mt-8 space-y-3 sm:mt-10">
             {[
               [t.faqQuestion1, t.faqAnswer1],
               [t.faqQuestion2, t.faqAnswer2],
@@ -1168,7 +1538,7 @@ function selectCourse(course: string) {
                   </span>
                 </summary>
 
-                <p className="mt-3 leading-7 text-gray-600">{answer}</p>
+                <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-[15px]">{answer}</p>
               </details>
             ))}
           </div>
@@ -1176,15 +1546,15 @@ function selectCourse(course: string) {
       </section>
 
       {/* CONTACT & SUPPORT */}
-      <section id="contact" className="bg-gray-50 py-20">
-        <div className="mx-auto max-w-3xl px-5 text-center">
-          <p className="font-semibold text-blue-700">{t.contactSupport}</p>
+      <section id="contact" className="bg-slate-50 py-14 sm:py-16 lg:py-20">
+        <div className="landing-container mx-auto max-w-3xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.contactSupport}</p>
 
-          <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
             {t.contactTitle}
           </h2>
 
-          <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-7 text-slate-600 sm:text-base">
             {t.contactDescription}
           </p>
 
@@ -1193,52 +1563,53 @@ function selectCourse(course: string) {
               href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-md transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 sm:w-auto sm:py-3.5"
             >
               {t.contactWhatsApp}
             </a>
 
             <Link
               href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-6 py-3 text-base font-semibold text-white shadow-md transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto sm:py-3.5"
             >
               {t.contactRequirement}
             </Link>
 
             <Link
               href="/teachers"
-              className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-6 py-3.5 text-base font-semibold text-gray-800 transition hover:border-blue-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              className="inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 text-base font-semibold text-slate-800 transition hover:border-blue-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto sm:py-3.5"
             >
               {t.contactBrowseTeachers}
             </Link>
           </div>
 
-          <p className="mt-5 text-sm text-gray-500">{t.contactNeedHelp}</p>
+          <p className="mt-5 text-sm text-slate-500">{t.contactNeedHelp}</p>
         </div>
       </section>
 
-      <section className="mx-auto mt-16 max-w-7xl px-6 pb-16">
-  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-6 py-16 text-center shadow-xl md:px-12 md:py-20">
+      <section className="bg-white pb-14 sm:pb-16 lg:pb-20">
+        <div className="landing-container">
+  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-6 py-12 text-center shadow-xl sm:px-10 md:px-12 md:py-16">
     {/* Decorative background */}
     <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
     <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl" />
 
     <div className="relative mx-auto max-w-3xl">
-      <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-blue-100">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100 sm:text-sm">
         {t.startToday}
       </p>
 
-      <h2 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+      <h2 className="text-balance text-2xl font-extrabold tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">
         {t.rightTeacher}
       </h2>
 
-      <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-blue-50 md:text-xl">
+      <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-7 text-blue-50 sm:mt-6 sm:text-lg sm:leading-8 md:text-xl">
         {t.demoDesc}
       </p>
 
       <a
         href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
-        className="mt-9 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-green-700 hover:shadow-xl"
+        className="demo-cta mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-8 py-3.5 text-base font-bold text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-green-700 hover:shadow-xl sm:mt-9 sm:w-auto sm:py-4 sm:text-lg"
       >
         {t.bookDemo}
       </a>
@@ -1248,28 +1619,29 @@ function selectCourse(course: string) {
       </p>
     </div>
   </div>
+        </div>
 </section>
 
       {/* FOOTER */}
-      <footer className="mt-10 border-t bg-white">
-        <div className="mx-auto max-w-7xl px-5 py-12">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
-            <div className="lg:col-span-2">
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="landing-container py-10 sm:py-12">
+          <div className="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-6">
+            <div className="sm:col-span-2 lg:col-span-2">
               <p className="text-xl font-bold text-blue-700">UstaadHub</p>
 
-              <p className="mt-3 max-w-xs text-sm leading-7 text-gray-500">
+              <p className="mt-3 max-w-xs text-sm leading-7 text-slate-500">
                 {t.footerDescription}
               </p>
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-900">
                 {t.footerExplore}
               </h3>
 
-              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
                 <li>
-                  <Link href="/teachers" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <Link href="/teachers" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerFindTeachers}
                   </Link>
                 </li>
@@ -1277,20 +1649,20 @@ function selectCourse(course: string) {
                 <li>
                   <Link
                     href={isUrdu ? "/requirement?lang=ur" : "/requirement"}
-                    className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   >
                     {t.footerRequestTeacher}
                   </Link>
                 </li>
 
                 <li>
-                  <a href="#how" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <a href="#how" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerHowItWorks}
                   </a>
                 </li>
 
                 <li>
-                  <a href="#subjects" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <a href="#subjects" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerSubjects}
                   </a>
                 </li>
@@ -1298,25 +1670,25 @@ function selectCourse(course: string) {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-900">
                 {t.footerCompany}
               </h3>
 
-              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
                 <li>
-                  <a href="#about" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <a href="#about" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerAbout}
                   </a>
                 </li>
 
                 <li>
-                  <a href="#faq" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <a href="#faq" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerFaq}
                   </a>
                 </li>
 
                 <li>
-                  <a href="#contact" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <a href="#contact" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerContact}
                   </a>
                 </li>
@@ -1324,13 +1696,13 @@ function selectCourse(course: string) {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-900">
                 {t.footerForTeachers}
               </h3>
 
-              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
                 <li>
-                  <Link href="/register" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <Link href="/register" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerBecomeTeacher}
                   </Link>
                 </li>
@@ -1338,19 +1710,19 @@ function selectCourse(course: string) {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-900">
                 {t.footerLegal}
               </h3>
 
-              <ul className="mt-4 space-y-2 text-sm text-gray-500">
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
                 <li>
-                  <Link href="/privacy" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <Link href="/privacy" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerPrivacyPolicy}
                   </Link>
                 </li>
 
                 <li>
-                  <Link href="/terms" className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                  <Link href="/terms" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerTermsConditions}
                   </Link>
                 </li>
@@ -1358,12 +1730,12 @@ function selectCourse(course: string) {
             </div>
           </div>
 
-          <div className="mt-10 border-t pt-6">
-            <h3 className="text-sm font-semibold text-gray-900">
+          <div className="mt-8 border-t border-slate-200 pt-6 sm:mt-10">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-900">
               {t.footerFollow}
             </h3>
 
-            {/* Real, existing UstaadHub channels only — WhatsApp, YouTube,
+            {/* Real, existing UstaadHub channels only � WhatsApp, YouTube,
                 Facebook and Instagram. No placeholder links are added here. */}
             <ul className="mt-4 flex flex-wrap items-center gap-3">
               <li>
@@ -1373,7 +1745,7 @@ function selectCourse(course: string) {
                   rel="noopener noreferrer"
                   aria-label={t.contactWhatsApp}
                   title={t.contactWhatsApp}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-green-600 hover:bg-green-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-green-600 hover:bg-green-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <FaWhatsapp aria-hidden="true" className="h-5 w-5" />
                 </a>
@@ -1386,7 +1758,7 @@ function selectCourse(course: string) {
                   rel="noopener noreferrer"
                   aria-label={t.footerSocialYoutube}
                   title={t.footerSocialYoutube}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-red-600 hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-red-600 hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <FaYoutube aria-hidden="true" className="h-5 w-5" />
                 </a>
@@ -1399,7 +1771,7 @@ function selectCourse(course: string) {
                   rel="noopener noreferrer"
                   aria-label={t.footerSocialFacebook}
                   title={t.footerSocialFacebook}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-blue-600 hover:bg-blue-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-blue-600 hover:bg-blue-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <FaFacebookF aria-hidden="true" className="h-5 w-5" />
                 </a>
@@ -1412,24 +1784,24 @@ function selectCourse(course: string) {
                   rel="noopener noreferrer"
                   aria-label={t.footerSocialInstagram}
                   title={t.footerSocialInstagram}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition duration-200 hover:-translate-y-0.5 hover:border-pink-600 hover:bg-pink-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-pink-600 hover:bg-pink-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <FaInstagram aria-hidden="true" className="h-5 w-5" />
                 </a>
               </li>
             </ul>
 
-            <p className="mt-4 text-sm text-gray-500">
+            <p className="mt-4 text-sm text-slate-500">
               <a
                 href="#contact"
-                className="hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
               >
                 {t.footerContact}
               </a>
             </p>
           </div>
 
-          <p className="mt-8 border-t pt-6 text-sm text-gray-500">
+          <p className="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-500">
             {t.rightsReserved}
           </p>
         </div>
