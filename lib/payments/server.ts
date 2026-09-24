@@ -434,3 +434,178 @@ export async function releaseUnpaidRequirement(params: {
     return false;
   }
 }
+
+// ============================================================
+// Support UstaadHub ledger (donations + sponsorships)
+// ============================================================
+// Separate from public.payments (which stays reserved for the
+// learning-requirement flow). Rows are written and transitioned only
+// through the service role, keyed by the UNIQUE razorpay_order_id, so
+// verification and the signed webhook stay idempotent.
+// ============================================================
+
+/** One row of the support ledger, as far as the server routes need it. */
+export type SupportPaymentLedgerRow = {
+  id: string;
+  user_id: string | null;
+  amount: number;
+  currency: string;
+  payment_status: string;
+  razorpay_payment_id: string | null;
+};
+
+/**
+ * Reads our own support-payment record for a gateway order id, so the
+ * webhook can cross-check an event against the amount/currency we
+ * recorded server-side (a signature-verified body is never trusted to
+ * decide what the supporter gave).
+ */
+export async function findSupportPaymentByOrderId(
+  orderId: string,
+): Promise<SupportPaymentLedgerRow | null> {
+  const client = createServiceClient();
+
+  if (!client) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await client
+      .from("support_payments")
+      .select(
+        "id, user_id, amount, currency, payment_status, razorpay_payment_id",
+      )
+      .eq("razorpay_order_id", orderId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error) {
+        console.error(
+          "[payments] support payment lookup failed:",
+          error.message,
+        );
+      }
+
+      return null;
+    }
+
+    const row = data as Record<string, unknown>;
+
+    return {
+      id: String(row.id ?? ""),
+      user_id: typeof row.user_id === "string" ? row.user_id : null,
+      amount: Number(row.amount ?? 0),
+      currency: String(row.currency ?? "INR"),
+      payment_status: String(row.payment_status ?? "pending"),
+      razorpay_payment_id:
+        typeof row.razorpay_payment_id === "string"
+          ? row.razorpay_payment_id
+          : null,
+    };
+  } catch (err) {
+    console.error(
+      "[payments] support payment lookup error:",
+      err instanceof Error ? err.message : "unknown error",
+    );
+
+    return null;
+  }
+}
+
+export type ApplySupportPaymentParams = {
+  orderId: string;
+  paymentId: string | null;
+  status: "paid" | "failed";
+  failureReason?: string | null;
+  signature?: string | null;
+};
+
+export type ApplySupportPaymentOutcome =
+  | { ok: true; applied: boolean }
+  | { ok: false; reason: string };
+
+/**
+ * Applies a verified support-payment result through the service role.
+ *
+ * Idempotency / safety rules (mirrors public.apply_payment_result):
+ *   * 'paid' only transitions rows that are not already 'paid'
+ *     (a replayed success callback/webhook is a no-op),
+ *   * 'failed' is only applied while the row is still 'pending',
+ *     so an out-of-order event can never downgrade a paid donation,
+ *   * a captured gateway payment id can never attach to a second row
+ *     (partial UNIQUE index; a violation surfaces as an update error).
+ *
+ * Returns applied=false when nothing matched (already processed or
+ * unknown order) - callers treat that as success, not as a failure.
+ */
+export async function applySupportPaymentResult(
+  params: ApplySupportPaymentParams,
+): Promise<ApplySupportPaymentOutcome> {
+  const client = createServiceClient();
+
+  if (!client) {
+    return { ok: false, reason: "server_not_configured" };
+  }
+
+  try {
+    if (params.status === "paid") {
+      if (!params.paymentId || params.paymentId.trim() === "") {
+        return { ok: false, reason: "payment_id_required" };
+      }
+
+      const { data, error } = await client
+        .from("support_payments")
+        .update({
+          payment_status: "paid",
+          razorpay_payment_id: params.paymentId,
+          razorpay_signature: params.signature ?? null,
+          failure_reason: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("razorpay_order_id", params.orderId)
+        .neq("payment_status", "paid")
+        .select("id");
+
+      if (error) {
+        console.error(
+          "[payments] support payment paid update failed:",
+          error.message,
+        );
+
+        return { ok: false, reason: "update_failed" };
+      }
+
+      return { ok: true, applied: (data?.length ?? 0) > 0 };
+    }
+
+    const { data, error } = await client
+      .from("support_payments")
+      .update({
+        payment_status: "failed",
+        failure_reason: params.failureReason ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("razorpay_order_id", params.orderId)
+      .eq("payment_status", "pending")
+      .select("id");
+
+    if (error) {
+      console.error(
+        "[payments] support payment failed update failed:",
+        error.message,
+      );
+
+      return { ok: false, reason: "update_failed" };
+    }
+
+    return { ok: true, applied: (data?.length ?? 0) > 0 };
+  } catch (err) {
+    console.error(
+      "[payments] applySupportPaymentResult error:",
+      err instanceof Error ? err.message : "unknown error",
+    );
+
+    return { ok: false, reason: "update_failed" };
+  }
+}

@@ -18,8 +18,9 @@ import {
   FaWhatsapp,
   FaYoutube,
 } from "react-icons/fa";
+import SupportSection from "@/components/SupportSection";
 
-// Structured data (JSON-LD) for the homepage � describes genuine UstaadHub
+// Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
 // organization/website info only. No invented ratings, reviews or offers.
 const homeSchema = {
   "@context": "https://schema.org",
@@ -36,28 +37,28 @@ const homeSchema = {
   },
 };
 
-// Hero banner slides � the existing 1440�720 UstaadHub screenshots in public/.
+// Hero banner slides — the existing 1440×720 UstaadHub screenshots in public/.
 // They crossfade inside the hero website-preview frame (see HeroShowcase).
 const heroSlides = [
   {
     src: "/hero-1.png",
-    alt: "UstaadHub homepage � find the right teacher for Quran, Islamic studies, Arabic and more",
+    alt: "UstaadHub homepage — find the right teacher for Quran, Islamic studies, Arabic and more",
   },
   {
     src: "/hero-2.png",
-    alt: "UstaadHub homepage � personalised one-to-one online classes with experienced teachers",
+    alt: "UstaadHub homepage — personalised one-to-one online classes with experienced teachers",
   },
   {
     src: "/hero-3.png",
-    alt: "UstaadHub homepage � learn Quran, Islamic Studies, Arabic and languages online",
+    alt: "UstaadHub homepage — learn Quran, Islamic Studies, Arabic and languages online",
   },
   {
     src: "/hero-4.png",
-    alt: "UstaadHub homepage � connect with trusted, verified teachers",
+    alt: "UstaadHub homepage — connect with trusted, verified teachers",
   },
   {
     src: "/hero-5.png",
-    alt: "UstaadHub homepage � flexible timings and personalised learning",
+    alt: "UstaadHub homepage — flexible timings and personalised learning",
   },
 ];
 
@@ -129,7 +130,7 @@ const copy = {
     popular: "Popular:",
     postRequirement: "?? Post Your Learning Requirement",
     tellUs:
-      "Tell us what you want to learn � we�ll help you find the right teacher.",
+      "Tell us what you want to learn — we’ll help you find the right teacher.",
     oneToOne: "? One-to-one classes",
     flexibleTimings: "? Flexible timings",
     experiencedTeachers: "? Experienced teachers",
@@ -188,7 +189,7 @@ const copy = {
     demoDesc:
       "Book a demo class and experience the right learning approach before you decide.",
     bookDemo: "?? Book a Demo Class",
-    rightsReserved: "� 2026 UstaadHub. All rights reserved.",
+    rightsReserved: "© 2026 UstaadHub. All rights reserved.",
     // About section
     aboutUstaadHub: "ABOUT USTAADHUB",
     aboutTitle: "About UstaadHub",
@@ -201,7 +202,7 @@ const copy = {
     aboutTeachers:
       "Teachers can create a profile and go through our verification and onboarding process before they start offering classes.",
     aboutNotAutomatic:
-      "Teacher matching is assisted by our admin team � it is not fully automatic.",
+      "Teacher matching is assisted by our admin team — it is not fully automatic.",
     // FAQ section
     faq: "FAQ",
     faqTitle: "Frequently Asked Questions",
@@ -253,8 +254,67 @@ const copy = {
     footerBecomeTeacher: "Become a Teacher",
     footerPrivacyPolicy: "Privacy Policy",
     footerTermsConditions: "Terms & Conditions",
+    support: {
+      eyebrow: "SUPPORT USTAADHUB",
+      title: "Support UstaadHub",
+      desc: "Your one-time support helps students who cannot afford a teacher find one, and keeps UstaadHub growing for everyone.",
+      donateTitle: "Donate",
+      donateDesc:
+        "Make a one-time contribution of any amount to support the platform and our outreach to students in need.",
+      donateCta: "Donate Now",
+      sponsorTitle: "Sponsor a Student",
+      sponsorDesc:
+        "Cover a student's learning so they can start one-to-one classes with a verified teacher.",
+      sponsorCta: "Sponsor Now",
+      chooseAmount: "Choose an amount",
+      customLabel: "Custom amount",
+      payNow: "Pay securely",
+      processing: "Starting secure checkout...",
+      verifying: "Payment received. Confirming it with the payment gateway...",
+      successTitle: "Thank you for your support!",
+      successDesc:
+        "Your payment was received and recorded. Your support helps more students learn.",
+      failedDesc:
+        "The payment was not completed and no amount was charged. You can try again.",
+      errorDesc:
+        "We could not start the checkout. Please check your connection and try again.",
+      disabled:
+        "Online payments are currently disabled. Please try again later or contact us.",
+      secure:
+        "Payments are processed by Razorpay and verified on our server. UstaadHub never stores your card details.",
+    },
   },
   ur: {
+    support: {
+      eyebrow: "USTAADHUB کی معاونت کریں",
+      title: "UstaadHub کی معاونت کریں",
+      desc: "آپ کی ایک بار کی معاونت ان طالب علم کی مدد کرتی ہے جو استاد کا اخراجات اٹھا نہیں سکتے، اور UstaadHub کو سب کے لیے آگے بڑھاتی ہے۔",
+      donateTitle: "عطیہ دیں",
+      donateDesc:
+        "پلیٹ فارم اور ضرورت مند طالب علموں تک ہماری پہنچ کے لیے ایک بار کی رقم دیں۔",
+      donateCta: "ابھی عطیہ دیں",
+      sponsorTitle: "طالب علم کو سپانسر کریں",
+      sponsorDesc:
+        "کسی طالب علم کی تعلیم کا خرچہ وہ کریں تاکہ وہ تصدیق شدہ استاد سے نجی کلاسز شروع کر سکے۔",
+      sponsorCta: "ابھی سپانسر کریں",
+      chooseAmount: "رقم منتخب کریں",
+      customLabel: "منفرد رقم",
+      payNow: "محفوظ ادائیگی کریں",
+      processing: "محفوظ چیک آؤٹ شروع کیا جا رہا ہے...",
+      verifying: "ادائیگی موصول ہو گئی۔ پیمنٹ گیٹ وے سے تصدیق کی جا رہی ہے...",
+      successTitle: "آپ کی معاونت کا شکریہ!",
+      successDesc:
+        "آپ کی ادائیگی وصول اور محفوظ طور پر درج ہو گئی ہے۔ آپ کی معاونت مزید طالب علموں کی تعلیم میں مدد دیتی ہے۔",
+      failedDesc:
+        "ادائیگی مکمل نہیں ہو سکی اور کوئی رقم وصول نہیں کی گئی۔ آپ دوبارہ کوشش کر سکتے ہیں۔",
+      errorDesc:
+        "ہم چیک آؤٹ شروع نہیں کر سکے۔ براہ کرم اپنا رابطہ چیک کریں اور دوبارہ کوشش کریں۔",
+      disabled:
+        "آن لائن ادائیگیاں فی الحال بند ہیں۔ براہ کرم بعد میں دوبارہ کوشش کریں یا ہم سے رابطہ کریں۔",
+      secure:
+        "ادائیگیاں Razorpay کے ذریعے کی جاتی ہیں اور ہمارے سرور پر تصدیق کی جاتی ہیں۔ UstaadHub آپ کے کارڈ کی تفصیلات محفوظ نہیں رکھتا۔",
+    },
+
     findTeachers: "?????? ???? ????",
     subjects: "??????",
     howItWorks: "?? ???? ??? ???? ???",
@@ -287,7 +347,7 @@ const copy = {
     popular:"?????:",
     postRequirement:"?? ???? ?????? ????? ???? ????",
     tellUs:
-      "???? ?????? ?? ?? ??? ?????? ????? ??? � ?? ?? ?? ??? ???? ????? ???? ???? ??? ??? ???? ???",
+      "???? ?????? ?? ?? ??? ?????? ????? ??? — ?? ?? ?? ??? ???? ????? ???? ???? ??? ??? ???? ???",
     oneToOne:"? ?? ?? ?? ?????",
     flexibleTimings:"? ?????? ?????",
     experiencedTeachers:"? ????? ??? ??????",
@@ -347,7 +407,7 @@ const copy = {
     demoDesc:
       "????? ???? ?? ???? ???? ???? ?? ???? ??? ?????? ?? ???? ????? ????????",
     bookDemo:"?? ???? ???? ?? ????",
-    rightsReserved:"� 2026 UstaadHub? ???? ???? ????? ????",
+    rightsReserved:"© 2026 UstaadHub? ???? ???? ????? ????",
     // About section
     aboutUstaadHub:"????? ???? ???",
     aboutTitle:"UstaadHub ?? ???? ???",
@@ -360,7 +420,7 @@ const copy = {
     aboutTeachers:
       "?????? ???? ??????? ??? ???? ??? ??? ????? ? ?? ?????? ?? ??? ?? ??? ?? ????? ??? ?? ???? ????",
     aboutNotAutomatic:
-      "????? ?? ????? ????? ????? ??? ?? ??? ?? ???? ?? � ?? ???? ??? ?? ?????? ???? ???",
+      "????? ?? ????? ????? ????? ??? ?? ??? ?? ???? ?? — ?? ???? ??? ?? ?????? ???? ???",
     // FAQ section
     faq:"??? ??????",
     faqTitle:"???? ????? ???? ???? ??????",
@@ -838,7 +898,7 @@ function selectCourse(course: string) {
         )}
       </nav>
       <section id="hero" className="relative bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        {/* Static background � soft gradient blobs and a faint grid, purely decorative */}
+        {/* Static background — soft gradient blobs and a faint grid, purely decorative */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -966,7 +1026,7 @@ function selectCourse(course: string) {
 
                 </div>
 
-                {/* CUSTOM FLOATING COURSE SUGGESTIONS � full card width, floats above tags below */}
+                {/* CUSTOM FLOATING COURSE SUGGESTIONS — full card width, floats above tags below */}
                 {showCourseList && (
                   <div
                     className={`hero-search-dropdown is-visible absolute left-0 right-0 top-[calc(100%+8px)] z-50 w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl shadow-[0_20px_50px_rgba(15,23,42,0.15)] backdrop-blur-xl`}
@@ -1060,7 +1120,7 @@ function selectCourse(course: string) {
             </div>
 
           </div>
-          {/* HERO VISUAL � the existing UstaadHub screenshots presented as a website preview */}
+          {/* HERO VISUAL — the existing UstaadHub screenshots presented as a website preview */}
           <div className="hero-reveal hero-delay-3 relative mx-auto w-full max-w-md md:max-w-none">
             {/* soft ambient glow behind the preview (decorative only) */}
             <div
@@ -1074,7 +1134,7 @@ function selectCourse(course: string) {
               autoplayInterval={5200}
             />
 
-            {/* compact highlights � no longer floating over the screenshot */}
+            {/* compact highlights — no longer floating over the screenshot */}
             <div className="relative mt-4">
               <div className="grid grid-cols-3 gap-2 rounded-2xl border border-blue-100/70 bg-white/80 p-2.5 text-center shadow-sm backdrop-blur sm:gap-3 sm:p-3">
                 <div>
@@ -1396,7 +1456,7 @@ function selectCourse(course: string) {
                           <span className="min-w-0 text-right font-semibold text-slate-800">
                             {[weeklyFee, monthlyFee]
                               .filter(Boolean)
-                              .join(" � ")}
+                              .join(" · ")}
                           </span>
                         </div>
                       )}
@@ -1544,6 +1604,9 @@ function selectCourse(course: string) {
           </div>
         </div>
       </section>
+
+      {/* SUPPORT USTAADHUB */}
+      <SupportSection copy={t.support} />
 
       {/* CONTACT & SUPPORT */}
       <section id="contact" className="bg-slate-50 py-14 sm:py-16 lg:py-20">
@@ -1735,7 +1798,7 @@ function selectCourse(course: string) {
               {t.footerFollow}
             </h3>
 
-            {/* Real, existing UstaadHub channels only � WhatsApp, YouTube,
+            {/* Real, existing UstaadHub channels only — WhatsApp, YouTube,
                 Facebook and Instagram. No placeholder links are added here. */}
             <ul className="mt-4 flex flex-wrap items-center gap-3">
               <li>

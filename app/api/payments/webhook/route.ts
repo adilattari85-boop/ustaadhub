@@ -5,10 +5,13 @@ import {
 } from "@/lib/payments/razorpay";
 import {
   applyPaymentResult,
+  applySupportPaymentResult,
   findPaymentByOrderId,
+  findSupportPaymentByOrderId,
   forgetWebhookEvent,
   jsonResponse,
   recordWebhookEvent,
+  type SupportPaymentLedgerRow,
 } from "@/lib/payments/server";
 
 // Signed gateway webhook (the source of truth when the student closes the tab
@@ -48,6 +51,136 @@ type NormalizedEvent = {
 };
 
 const MAX_EVENT_ID_LENGTH = 200;
+
+/**
+ * Applies a signed gateway event to the "Support UstaadHub" ledger
+ * (donations + sponsorships) when the order id is NOT in public.payments.
+ *
+ * Same rules as the requirement flow: the reported amount/currency are
+ * cross-checked against OUR recorded row, only a captured payment may be
+ * marked paid, and every transition is idempotent (guarded by
+ * payment_status on the UNIQUE razorpay_order_id). Returns null when the
+ * order is unknown to BOTH ledgers, so the caller can answer "ignored".
+ */
+async function applyEventToSupportLedger(
+  config: NonNullable<ReturnType<typeof getPaymentGatewayConfig>>,
+  event: NormalizedEvent,
+): Promise<ReturnType<typeof jsonResponse> | null> {
+  const supportPayment: SupportPaymentLedgerRow | null =
+    await findSupportPaymentByOrderId(event.orderId);
+
+  if (!supportPayment) {
+    return null;
+  }
+
+  const expectedMinorUnits = toMinorUnits(supportPayment.amount);
+
+  if (
+    event.amountMinorUnits !== null &&
+    event.amountMinorUnits !== expectedMinorUnits
+  ) {
+    console.warn(
+      "[payments/webhook] support event amount does not match the recorded amount; no state change.",
+    );
+
+    return jsonResponse({ status: "amount_mismatch" });
+  }
+
+  if (
+    event.currency !== null &&
+    event.currency.toUpperCase() !== supportPayment.currency.toUpperCase()
+  ) {
+    console.warn(
+      "[payments/webhook] support event currency does not match the recorded currency; no state change.",
+    );
+
+    return jsonResponse({ status: "currency_mismatch" });
+  }
+
+  const isSuccessEvent =
+    event.eventType === "payment.captured" || event.eventType === "order.paid";
+  const isAuthorizedEvent = event.eventType === "payment.authorized";
+  const isFailedEvent = event.eventType === "payment.failed";
+
+  if (isSuccessEvent) {
+    if (!event.paymentId) {
+      return jsonResponse({ status: "ignored" });
+    }
+
+    if (event.gatewayStatus && event.gatewayStatus !== "captured") {
+      return jsonResponse({ status: "not_captured" });
+    }
+
+    const outcome = await applySupportPaymentResult({
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      status: "paid",
+    });
+
+    if (!outcome.ok) {
+      await forgetWebhookEvent(event.eventId);
+
+      return jsonResponse({ error: outcome.reason }, 500);
+    }
+
+    return jsonResponse({ status: "paid" });
+  }
+
+  if (isAuthorizedEvent) {
+    if (!event.paymentId) {
+      return jsonResponse({ status: "ignored" });
+    }
+
+    // Manual-capture gateway accounts: try to capture server-side; the
+    // capture event (or the browser verification route) is the fallback.
+    const capture = await captureGatewayPayment(config, {
+      paymentId: event.paymentId,
+      amountMinorUnits: expectedMinorUnits,
+      currency: supportPayment.currency,
+    });
+
+    if (!capture.ok || capture.data.status !== "captured") {
+      console.error(
+        "[payments/webhook] authorized support payment could not be captured; waiting for the capture event.",
+      );
+
+      return jsonResponse({ status: "not_captured" });
+    }
+
+    const outcome = await applySupportPaymentResult({
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      status: "paid",
+    });
+
+    if (!outcome.ok) {
+      await forgetWebhookEvent(event.eventId);
+
+      return jsonResponse({ error: outcome.reason }, 500);
+    }
+
+    return jsonResponse({ status: "paid" });
+  }
+
+  if (isFailedEvent) {
+    const outcome = await applySupportPaymentResult({
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      status: "failed",
+      failureReason: event.failureReason,
+    });
+
+    if (!outcome.ok) {
+      await forgetWebhookEvent(event.eventId);
+
+      return jsonResponse({ error: outcome.reason }, 500);
+    }
+
+    return jsonResponse({ status: "failed" });
+  }
+
+  return jsonResponse({ status: "ignored" });
+}
 
 function asRecord(value: unknown): JsonRecord | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -198,6 +331,14 @@ export async function POST(request: Request) {
     const payment = await findPaymentByOrderId(event.orderId);
 
     if (!payment) {
+      // Not a learning-requirement order: it may be a "Support UstaadHub"
+      // donation/sponsorship, which lives in the separate support ledger.
+      const supportResponse = await applyEventToSupportLedger(config, event);
+
+      if (supportResponse) {
+        return supportResponse;
+      }
+
       console.warn(
         "[payments/webhook] event references an order that is not in the payment ledger.",
       );
