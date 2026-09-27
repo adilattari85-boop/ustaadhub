@@ -99,6 +99,7 @@ function formatFee(value: number | null, period: "week" | "month") {
 const copy = {
   en: {
     findTeachers: "Find Teachers",
+    courses: "Courses",
     subjects: "Subjects",
     howItWorks: "How It Works",
     login: "Login",
@@ -315,6 +316,7 @@ const copy = {
         "ادائیگیاں Razorpay کے ذریعے کی جاتی ہیں اور ہمارے سرور پر تصدیق کی جاتی ہیں۔ UstaadHub آپ کے کارڈ کی تفصیلات محفوظ نہیں رکھتا۔",
     },
     findTeachers: "اساتذہ تلاش کریں",
+    courses: "کورسز",
     subjects: "مضامین",
     howItWorks: "یہ کیسے کام کرتا ہے؟",
     login: "لاگ اِن",
@@ -901,13 +903,15 @@ function selectCourse(course: string) {
               {[
                 { href: "#teachers", label: t.findTeachers },
                 { href: "#subjects", label: t.subjects },
+                { href: "#subjects", label: t.courses },
                 { href: "#how", label: t.howItWorks },
                 { href: "#about", label: t.footerAbout },
                 { href: "#faq", label: t.footerFaq },
                 { href: "#contact", label: t.footerContact },
+                { href: "#support", label: t.support.title },
               ].map((item) => (
                 <a
-                  key={item.href}
+                  key={`${item.href}-${item.label}`}
                   href={item.href}
                   onClick={() => setMobileNavOpen(false)}
                   className="rounded-lg px-3 py-2.5 text-[15px] font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
