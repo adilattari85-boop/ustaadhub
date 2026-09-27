@@ -19,6 +19,7 @@ import {
   FaYoutube,
 } from "react-icons/fa";
 import SupportSection from "@/components/SupportSection";
+import FeaturedTeachersCarousel from "@/components/FeaturedTeachersCarousel";
 
 // Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
 // organization/website info only. No invented ratings, reviews or offers.
@@ -77,24 +78,6 @@ type TeacherProfile = {
 
 const teacherColumns =
   "id, full_name, subjects, experience, languages, teaching_mode, fee_weekly, fee_monthly, profile_photo_url, is_verified";
-
-function getInitials(name: string | null) {
-  const initials = (name || "Teacher")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
-
-  return initials || "T";
-}
-
-function formatFee(value: number | null, period: "week" | "month") {
-  if (value === null || value === undefined) return null;
-
-  return `₹${value.toLocaleString("en-IN")}/${period}`;
-}
 
 const copy = {
   en: {
@@ -701,7 +684,7 @@ function selectCourse(course: string) {
   .from("teacher_profiles")
   .select(teacherColumns, { count: "exact" })
   .eq("is_verified", true)
-  .limit(3)
+  .limit(12)
   .abortSignal(controller.signal);
 
           window.clearTimeout(timeoutId);
@@ -1458,92 +1441,22 @@ function selectCourse(course: string) {
               )}
             </div>
           ) : (
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-              {filteredTutors.map((teacher) => {
-                const weeklyFee = formatFee(teacher.fee_weekly, "week");
-                const monthlyFee = formatFee(teacher.fee_monthly, "month");
-
-                return (
-                  <div
-                    key={teacher.id}
-                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-                  >
-                    <div className="flex items-center gap-4 p-5 sm:p-6">
-                      {teacher.profile_photo_url ? (
-                        <img
-                          src={teacher.profile_photo_url}
-                          alt={teacher.full_name || "Teacher"}
-                          className="h-16 w-16 shrink-0 rounded-full object-cover sm:h-20 sm:w-20"
-                        />
-                      ) : (
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-700 sm:h-20 sm:w-20 sm:text-xl">
-                          {getInitials(teacher.full_name)}
-                        </div>
-                      )}
-
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-bold text-slate-900 sm:text-lg">
-                          {teacher.full_name || "Ustaad"}
-                        </h3>
-
-                        <p className="mt-1 truncate text-sm text-blue-700">
-                          {(teacher.subjects || []).slice(0, 2).join(" & ") ||
-                            (isUrdu ? t.subjectsNotSpecified : "Subjects not specified")}
-                        </p>
-
-                        <span className="mt-2 inline-block rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
-                          {t.verified}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-1 flex-col border-t border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span className="shrink-0 text-slate-500">{t.experience}</span>
-                        <span className="min-w-0 text-right font-semibold text-slate-800">
-                          {teacher.experience || (isUrdu ? t.notSpecified : "Not specified")}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 flex justify-between gap-4 text-sm">
-                        <span className="shrink-0 text-slate-500">{t.teachingMode}</span>
-                        <span className="min-w-0 text-right font-semibold text-slate-800">
-                          {teacher.teaching_mode || (isUrdu ? t.notSpecified : "Not specified")}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 flex justify-between gap-4 text-sm">
-                        <span className="shrink-0 text-slate-500">{t.languages}</span>
-                        <span className="min-w-0 text-right font-semibold text-slate-800">
-                          {(teacher.languages || []).join(", ") ||
-                            (isUrdu ? t.notSpecified : "Not specified")}
-                        </span>
-                      </div>
-
-                      {(weeklyFee || monthlyFee) && (
-                        <div className="mt-3 flex justify-between gap-4 text-sm">
-                          <span className="shrink-0 text-slate-500">{t.fees}</span>
-                          <span className="min-w-0 text-right font-semibold text-slate-800">
-                            {[weeklyFee, monthlyFee]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="mt-5 flex items-center justify-end pt-1">
-                        <Link
-                          href={`/teachers/${teacher.id}`}
-                          className="inline-flex w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 sm:w-auto"
-                        >
-                          {t.viewProfile}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <FeaturedTeachersCarousel
+              teachers={filteredTutors}
+              locale={locale}
+              labels={{
+                verified: t.verified,
+                experience: t.experience,
+                teachingMode: t.teachingMode,
+                languages: t.languages,
+                fees: t.fees,
+                viewProfile: t.viewProfile,
+                subjectsNotSpecified: isUrdu
+                  ? t.subjectsNotSpecified
+                  : "Subjects not specified",
+                notSpecified: isUrdu ? t.notSpecified : "Not specified",
+              }}
+            />
           )}
         </div>
       </section>
