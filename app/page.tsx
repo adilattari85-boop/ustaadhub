@@ -104,7 +104,6 @@ const copy = {
     howItWorks: "How It Works",
     login: "Login",
     joinAsTeacher: "Join as Teacher",
-    heroBadge: "? Verified 1:1 teachers",
     heroTitleA: "Find the right",
     heroTitleC: "for Quran, Arabic & Islamic Studies.",
     heroDescription:
@@ -949,10 +948,6 @@ function selectCourse(course: string) {
         <div className="landing-container relative grid gap-10 pb-12 pt-10 sm:pt-12 md:grid-cols-2 md:items-center md:gap-10 md:pb-16 md:pt-8 lg:gap-14">
       {/* HERO */}
   <div className="min-w-0">
-
-            <div className="hero-reveal mb-4 inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-xs font-semibold text-blue-800 sm:text-sm">
-              {t.heroBadge}
-            </div>
 
             <h1
               className={`hero-reveal hero-delay-1 text-balance ${
