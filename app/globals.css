@@ -212,3 +212,42 @@ option {
 .jobs-ticker:focus-within .jobs-ticker-track {
   animation-play-state: paused;
 }
+
+/* ===== Mobile course picker — bottom sheet for the hero course search =====
+   Phones open this sheet instead of the floating dropdown (see the hero
+   search handlers in app/page.tsx). Only opacity + transform animate, so the
+   sheet stays on the compositor thread. */
+@keyframes course-picker-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes course-picker-sheet-in {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.course-picker-backdrop {
+  animation: course-picker-backdrop-in 0.2s ease-out both;
+}
+
+.course-picker-sheet {
+  animation: course-picker-sheet-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Keep the last row clear of the iOS home indicator. */
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-picker-backdrop,
+  .course-picker-sheet {
+    animation: none;
+  }
+}

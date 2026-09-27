@@ -550,6 +550,7 @@ export default function Home({ locale = "en" }: HomeProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState("");
   const [showCourseList, setShowCourseList] = useState(false);
+  const [mobileCoursePickerOpen, setMobileCoursePickerOpen] = useState(false);
   const courseSearchRef = useRef<HTMLDivElement>(null);
   const [tutorQuery, setTutorQuery] = useState("");
   const [tutorCategory, setTutorCategory] = useState<TutorCategoryKey>("all");
@@ -601,6 +602,7 @@ export default function Home({ locale = "en" }: HomeProps) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setShowCourseList(false);
+        setMobileCoursePickerOpen(false);
       }
     }
 
@@ -641,6 +643,39 @@ const filteredCourses = courses.filter((course) =>
 function selectCourse(course: string) {
   window.location.href = `/requirement?course=${encodeURIComponent(course)}${isUrdu ? "&lang=ur" : ""}`;
 }
+
+  // Mobile picker: keep the chosen course in the search field and let the
+  // existing "Find Teachers" CTA perform the navigation (no second list).
+  function pickCourseIntoSearch(course: string) {
+    setCourseSearch(course);
+    setShowCourseList(false);
+    setMobileCoursePickerOpen(false);
+  }
+
+  // Lock background scroll while the mobile course picker sheet is open.
+  useEffect(() => {
+    if (!mobileCoursePickerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileCoursePickerOpen]);
+
+  // Close the picker once the viewport leaves the phone range (rotation or
+  // resize to desktop) so the background scroll lock never gets stuck on.
+  useEffect(() => {
+    if (!mobileCoursePickerOpen) return;
+    const phoneQuery = window.matchMedia("(max-width: 639px)");
+    function handlePhoneQueryChange(event: MediaQueryListEvent) {
+      if (!event.matches) {
+        setMobileCoursePickerOpen(false);
+      }
+    }
+    phoneQuery.addEventListener("change", handlePhoneQueryChange);
+    return () =>
+      phoneQuery.removeEventListener("change", handlePhoneQueryChange);
+  }, [mobileCoursePickerOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1002,7 +1037,31 @@ function selectCourse(course: string) {
                           setCourseSearch(e.target.value);
                           setShowCourseList(true);
                         }}
-                        onFocus={() => setShowCourseList(true)}
+                        onFocus={() => {
+                          if (
+                            typeof window !== "undefined" &&
+                            window.matchMedia("(max-width: 639px)").matches
+                          ) {
+                            setShowCourseList(false);
+                            setMobileCoursePickerOpen(true);
+                            return;
+                          }
+                          setShowCourseList(true);
+                        }}
+                        onClick={() => {
+                          if (
+                            typeof window !== "undefined" &&
+                            window.matchMedia("(max-width: 639px)").matches
+                          ) {
+                            setShowCourseList(false);
+                            setMobileCoursePickerOpen(true);
+                          }
+                        }}
+                        readOnly={
+                          typeof window !== "undefined" &&
+                          window.matchMedia("(max-width: 639px)").matches
+                        }
+                        inputMode="search"
                         placeholder={t.searchPlaceholder}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-4 text-base text-slate-900 outline-none transition focus:border-blue-600 focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-600 sm:text-lg"
                       />
@@ -1869,6 +1928,114 @@ function selectCourse(course: string) {
           </p>
         </div>
       </footer>
+
+      {/* MOBILE COURSE PICKER — bottom sheet (phones only)
+          The hero course input is read-only on small screens and opens this
+          sheet instead of the floating dropdown. Choosing a course writes it
+          into the hero field and closes the sheet; the existing "Find
+          Teachers" CTA then performs the navigation (see pickCourseIntoSearch).
+          Background scroll is locked while the sheet is open. */}
+      {mobileCoursePickerOpen && (
+        <div className="fixed inset-0 z-[60] sm:hidden">
+          <div
+            aria-hidden="true"
+            onClick={() => setMobileCoursePickerOpen(false)}
+            className="course-picker-backdrop absolute inset-0 bg-slate-900/40"
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              courseSearch.trim() ? t.matchingCourses : t.popularCourses
+            }
+            className="course-picker-sheet absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl"
+          >
+            {/* Sheet label + close */}
+            <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-4">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {courseSearch.trim() ? t.matchingCourses : t.popularCourses}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setMobileCoursePickerOpen(false)}
+                aria-label="Close course picker"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Typing here filters the sheet list using the same search state */}
+            <div className="shrink-0 px-4 pt-1">
+              <input
+                type="text"
+                inputMode="search"
+                value={courseSearch}
+                onChange={(e) => setCourseSearch(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-blue-600 focus:bg-white"
+              />
+            </div>
+
+            {/* Scrollable course list */}
+            <div
+              role="listbox"
+              aria-label={t.popularCourses}
+              className="custom-scrollbar mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-1"
+            >
+              {filteredCourses.length > 0 ? (
+                filteredCourses.map((course) => (
+                  <button
+                    key={course}
+                    type="button"
+                    role="option"
+                    aria-selected={courseSearch.trim() === course}
+                    onClick={() => pickCourseIntoSearch(course)}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-slate-700 transition hover:bg-slate-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                      </svg>
+                    </span>
+
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {isUrdu ? (courseUrduLabels[course] ?? course) : course}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-8 text-center text-sm text-slate-500">
+                  {t.noMatchingCourse}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
+
