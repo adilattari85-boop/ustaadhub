@@ -126,7 +126,7 @@ const copy = {
     matchingCourses: "Matching courses",
     popularCourses: "Popular courses",
     noMatchingCourse: "No matching course found.",
-    searchCourses: "Find Teachers",
+    searchCourses: "Find Courses",
     popular: "Popular:",
     postRequirement: "📝 Post Your Learning Requirement",
     tellUs:
@@ -342,7 +342,7 @@ const copy = {
     matchingCourses: "مماثل کورسز",
     popularCourses:"مقبول کورسز",
     noMatchingCourse:"کوئی مماثل کورس نہیں ملا۔",
-    searchCourses:"اساتذہ تلاش کریں",
+    searchCourses:"کورسز تلاش کریں",
     popular:"مقبول:",
     postRequirement:"📝 اپنی تعلیمی ضرورت پوسٹ کریں",
     tellUs:
@@ -1065,14 +1065,20 @@ function selectCourse(course: string) {
                     </div>
                   </div>
 
-                  {/* SEARCH BUTTON */}
+                  {/* SEARCH BUTTON — opens the course list; picking a course
+                      from that list continues to the requirement flow. */}
                   <button
                     type="button"
                     onClick={() => {
-                      if (filteredCourses.length > 0) {
-                        selectCourse(filteredCourses[0]);
+                      if (
+                        typeof window !== "undefined" &&
+                        window.matchMedia("(max-width: 639px)").matches
+                      ) {
                         setShowCourseList(false);
+                        setMobileCoursePickerOpen(true);
+                        return;
                       }
+                      setShowCourseList(true);
                     }}
                     disabled={filteredCourses.length === 0}
                     className="w-full shrink-0 rounded-xl bg-blue-700 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto sm:text-lg"
@@ -1999,7 +2005,13 @@ function selectCourse(course: string) {
                     type="button"
                     role="option"
                     aria-selected={courseSearch.trim() === course}
-                    onClick={() => pickCourseIntoSearch(course)}
+                    onClick={() => {
+                      // Same selection→navigation path as the desktop list: the
+                      // chosen course is handed to the requirement page, so the
+                      // visitor never has to type it again.
+                      pickCourseIntoSearch(course);
+                      selectCourse(course);
+                    }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-slate-700 transition hover:bg-slate-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
