@@ -22,7 +22,6 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const isTeacherLogin = searchParams.get("role") === "teacher";
   const redirectParam = searchParams.get("redirect");
-  const accountType = isTeacherLogin ? "teacher" : "student";
 
   // Validate redirect to prevent open redirect attacks
   const safeRedirect =
@@ -127,7 +126,7 @@ function LoginForm() {
           </a>
 
           <a
-            href={isTeacherLogin ? "/register" : "/signup"}
+            href={isTeacherLogin ? "/register" : "/requirement"}
             className="font-medium text-slate-700 hover:text-blue-600"
           >
             {isTeacherLogin ? "Create Teacher Profile" : "Create Account"}
@@ -139,17 +138,12 @@ function LoginForm() {
         <div className="mx-auto max-w-lg">
           <div className="rounded-2xl border bg-white p-8 shadow-sm">
 
-            <p className="font-semibold text-blue-600">
-              {accountType.toUpperCase()} LOGIN
-            </p>
-
             <h1 className="mt-2 text-3xl font-bold">
-              Welcome back
+              Login to UstaadHub
             </h1>
 
             <p className="mt-3 text-slate-600">
-              Login to your UstaadHub {accountType} account and continue your
-              learning journey.
+              Enter your email and password to continue.
             </p>
 
             {error && (
@@ -209,7 +203,7 @@ function LoginForm() {
               <p className="text-center text-sm text-slate-600">
                 Don't have an account?{" "}
                 <a
-                  href={isTeacherLogin ? "/register" : "/signup"}
+                  href={isTeacherLogin ? "/register" : "/requirement"}
                   className="font-semibold text-blue-600 hover:underline"
                 >
                   {isTeacherLogin ? "Create Teacher Profile" : "Sign Up"}
