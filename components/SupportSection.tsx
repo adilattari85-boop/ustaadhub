@@ -360,7 +360,7 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
               aria-modal="true"
               aria-label={type === "donation" ? copy.donateTitle : copy.sponsorTitle}
               tabIndex={-1}
-              className="fixed bottom-4 left-4 right-4 z-50 max-h-[90vh] w-full overflow-y-auto rounded-3xl border border-blue-200 bg-white p-6 text-left shadow-2xl outline-none sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:max-w-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-8"
+              className="fixed bottom-4 left-4 right-4 z-50 box-border max-h-[90vh] w-auto max-w-full overflow-y-auto rounded-3xl border border-blue-200 bg-white p-6 text-left shadow-2xl outline-none sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-8"
             >
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
@@ -381,14 +381,14 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
               {copy.chooseAmount}
             </p>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {PRESET_AMOUNTS[type].map((value) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => pickAmount(value)}
                   aria-pressed={preset === value}
-                  className={`rounded-xl border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                  className={`w-full min-w-0 rounded-xl border px-4 py-2 text-center text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 sm:w-auto ${
                     preset === value
                       ? "border-blue-600 bg-blue-600 text-white"
                       : "border-slate-300 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-700"
@@ -402,7 +402,7 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
                 type="button"
                 onClick={() => pickAmount(0)}
                 aria-pressed={preset === 0}
-                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                className={`w-full min-w-0 rounded-xl border px-4 py-2 text-center text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 sm:w-auto ${
                   preset === 0
                     ? "border-blue-600 bg-blue-600 text-white"
                     : "border-slate-300 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-700"
