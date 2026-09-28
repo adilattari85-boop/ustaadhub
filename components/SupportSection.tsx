@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   loadGatewayCheckout,
@@ -82,6 +82,44 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
 
   const busy = step === "creating" || step === "open" || step === "verifying";
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  function closePanel() {
+    setPanelOpen(false);
+
+    // Hand focus back to the CTA that opened the overlay so the
+    // open -> close cycle is legible instead of silently resetting.
+    triggerRef.current?.focus();
+    triggerRef.current = null;
+  }
+
+  // The amount picker is an overlay: the page behind it must not scroll and
+  // Escape must always hand the user back to the CTA.
+  useEffect(() => {
+    if (!panelOpen) {
+      return;
+    }
+
+    panelRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closePanel();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [panelOpen]);
+
   function selectedAmount(): number {
     if (preset === 0) {
       return Math.round(Number(custom));
@@ -91,6 +129,7 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
   }
 
   function resetSelection(next: PaymentType) {
+    triggerRef.current = document.activeElement as HTMLButtonElement | null;
     setType(next);
     setPreset(PRESET_AMOUNTS[next][0]);
     setCustom("");
@@ -308,7 +347,21 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
           </div>
         </div>
         {panelOpen && (
-          <div className="mx-auto mt-6 max-w-xl rounded-3xl border border-blue-200 bg-white p-6 text-left shadow-md sm:p-8">
+          <>
+            <div
+              aria-hidden="true"
+              onClick={closePanel}
+              className="fixed inset-0 z-50 bg-black/50"
+            />
+
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={type === "donation" ? copy.donateTitle : copy.sponsorTitle}
+              tabIndex={-1}
+              className="fixed bottom-4 left-4 right-4 z-50 max-h-[90vh] w-full overflow-y-auto rounded-3xl border border-blue-200 bg-white p-6 text-left shadow-2xl outline-none sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:max-w-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-8"
+            >
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
                 {type === "donation" ? copy.donateTitle : copy.sponsorTitle}
@@ -316,9 +369,9 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
 
               <button
                 type="button"
-                onClick={() => setPanelOpen(false)}
+                onClick={closePanel}
                 aria-label="Close"
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
               >
                 &#10005;
               </button>
@@ -445,6 +498,7 @@ export default function SupportSection({ copy }: { copy: SupportSectionCopy }) {
             </p>
 
           </div>
+          </>
         )}
 
       </div>
