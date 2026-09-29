@@ -20,6 +20,7 @@ import {
 } from "react-icons/fa";
 import SupportSection from "@/components/SupportSection";
 import FeaturedTeachersCarousel from "@/components/FeaturedTeachersCarousel";
+import JobsTickerSection from "@/components/JobsTickerSection";
 
 // Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
 // organization/website info only. No invented ratings, reviews or offers.
@@ -82,6 +83,7 @@ const teacherColumns =
 const copy = {
   en: {
     findTeachers: "Find Teachers",
+    findJobs: "Find Jobs",
     courses: "Courses",
     subjects: "Subjects",
     howItWorks: "How It Works",
@@ -298,6 +300,7 @@ const copy = {
         "ادائیگیاں Razorpay کے ذریعے کی جاتی ہیں اور ہمارے سرور پر تصدیق کی جاتی ہیں۔ UstaadHub آپ کے کارڈ کی تفصیلات محفوظ نہیں رکھتا۔",
     },
     findTeachers: "اساتذہ تلاش کریں",
+    findJobs: "ملازم تلاش کریں",
     courses: "کورسز",
     subjects: "مضامین",
     howItWorks: "یہ کیسے کام کرتا ہے؟",
@@ -802,6 +805,12 @@ function selectCourse(course: string) {
             >
               {t.findTeachers}
             </a>
+            <Link
+              href="/jobs"
+              className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
+            >
+              {t.findJobs}
+            </Link>
             <a
               href="#subjects"
               className="whitespace-nowrap text-[15px] font-medium text-slate-700 transition hover:text-blue-700"
@@ -891,6 +900,7 @@ function selectCourse(course: string) {
             <div className="landing-container flex flex-col gap-1 py-3">
               {[
                 { href: "#teachers", label: t.findTeachers },
+                { href: "/jobs", label: t.findJobs },
                 { href: "#subjects", label: t.subjects },
                 { href: "#subjects", label: t.courses },
                 { href: "#how", label: t.howItWorks },
@@ -924,6 +934,7 @@ function selectCourse(course: string) {
           </div>
         )}
       </nav>
+      <JobsTickerSection locale={isUrdu ? "ur" : "en"} />
       <section id="hero" className="relative bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Static background — soft gradient blobs and a faint grid, purely decorative */}
         <div

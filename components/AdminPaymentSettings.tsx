@@ -44,6 +44,18 @@ export default function AdminPaymentSettings() {
   const [errorMessage, setErrorMessage] = useState("");
   const [gateway, setGateway] = useState<GatewayStatus | null>(null);
 
+  // Job Contact Access switch - a THIRD, completely separate state block.
+  // Never derived from, or written together with, the requirement switch
+  // (`enabled` / `settings`) or the donation switch (`supportEnabled`).
+  const [jobContactEnabled, setJobContactEnabled] = useState(false);
+  const [jobContactSavedEnabled, setJobContactSavedEnabled] = useState(false);
+  const [jobContactAmount, setJobContactAmount] = useState("10");
+  const [jobContactSavedAmount, setJobContactSavedAmount] = useState("10");
+  const [jobContactLoading, setJobContactLoading] = useState(true);
+  const [jobContactSaving, setJobContactSaving] = useState(false);
+  const [jobContactErrorMessage, setJobContactErrorMessage] = useState("");
+  const [jobContactStatusMessage, setJobContactStatusMessage] = useState("");
+
   const gatewayReady = Boolean(
     gateway?.keyIdConfigured && gateway?.keySecretConfigured,
   );
@@ -81,6 +93,42 @@ export default function AdminPaymentSettings() {
       setLoading(false);
     }
 
+    /** Reads ONLY the Job Contact Access switch ('job_contact_payment' row). */
+    async function loadJobContactSettings() {
+      const { data, error } = await supabase.rpc(
+        "get_job_contact_payment_settings",
+      );
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        setJobContactErrorMessage(
+          "Could not load the Job Contact Access setting.",
+        );
+        setJobContactLoading(false);
+
+        return;
+      }
+
+      const row = (Array.isArray(data) ? data[0] : data) as {
+        job_contact_enabled?: boolean | null;
+        job_contact_amount?: number | string | null;
+      } | null;
+      const resolvedEnabled = row?.job_contact_enabled === true;
+      const resolvedAmount = Number(row?.job_contact_amount ?? 10);
+      const safeAmount = Number.isFinite(resolvedAmount) && resolvedAmount > 0
+        ? String(resolvedAmount)
+        : "10";
+
+      setJobContactEnabled(resolvedEnabled);
+      setJobContactSavedEnabled(resolvedEnabled);
+      setJobContactAmount(safeAmount);
+      setJobContactSavedAmount(safeAmount);
+      setJobContactLoading(false);
+    }
+
     async function loadGatewayStatus() {
       try {
         const {
@@ -112,6 +160,7 @@ export default function AdminPaymentSettings() {
     }
 
     void loadSettings();
+    void loadJobContactSettings();
     void loadGatewayStatus();
 
     return () => {
@@ -190,6 +239,86 @@ export default function AdminPaymentSettings() {
         : "Payment gateway is OFF. Students submit requirements for free, exactly as before.",
     );
   }
+
+  /**
+   * Saves ONLY the Job Contact Access switch and its unlock amount.
+   *
+   * Writes to public.admin_update_job_contact_payment_settings(), which touches
+   * only the 'job_contact_payment' row. It never sends the requirement amount,
+   * currency or enabled flag, and never sends the donation flag, so neither the
+   * requirement payment setting nor the Donation/Support setting can be changed
+   * from here.
+   *
+   * The currency is not a form field: the database pins it to INR.
+   */
+  async function handleJobContactSave() {
+    if (jobContactSaving) {
+      return;
+    }
+
+    setJobContactErrorMessage("");
+    setJobContactStatusMessage("");
+
+    const parsedAmount = Number(jobContactAmount);
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setJobContactErrorMessage(
+        "Enter a valid unlock amount greater than 0 (for example 10).",
+      );
+
+      return;
+    }
+
+    if (jobContactEnabled && !gatewayReady) {
+      setJobContactErrorMessage(
+        "The payment gateway credentials are not configured on the server yet, so Job Contact Access cannot be enabled.",
+      );
+
+      return;
+    }
+
+    setJobContactSaving(true);
+
+    const { data, error } = await supabase.rpc(
+      "admin_update_job_contact_payment_settings",
+      {
+        p_enabled: jobContactEnabled,
+        p_amount: parsedAmount,
+      },
+    );
+
+    if (error) {
+      setJobContactErrorMessage(
+        "Could not save the Job Contact Access setting. Admin access is required.",
+      );
+      setJobContactSaving(false);
+
+      return;
+    }
+
+    const row = (Array.isArray(data) ? data[0] : data) as {
+      job_contact_enabled?: boolean | null;
+      job_contact_amount?: number | string | null;
+    } | null;
+    const resolvedEnabled = row?.job_contact_enabled === true;
+    const resolvedAmount = Number(row?.job_contact_amount ?? parsedAmount);
+    const safeAmount =
+      Number.isFinite(resolvedAmount) && resolvedAmount > 0
+        ? String(resolvedAmount)
+        : String(parsedAmount);
+
+    setJobContactEnabled(resolvedEnabled);
+    setJobContactSavedEnabled(resolvedEnabled);
+    setJobContactAmount(safeAmount);
+    setJobContactSavedAmount(safeAmount);
+    setJobContactSaving(false);
+    setJobContactStatusMessage(
+      resolvedEnabled
+        ? `Job Contact Access is ON. Viewing a job's contact details will require a one-time INR ${safeAmount} payment.`
+        : "Job Contact Access is OFF. Job contact details stay free for every visitor.",
+    );
+  }
+
 return (
     <section className="mt-10 rounded-2xl border bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -312,6 +441,110 @@ return (
                   }`
                 : "status unavailable"}
             </p>
+          </div>
+
+          <div className="mt-5 rounded-2xl border-2 border-slate-300 bg-slate-50 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-800">Job Contact Access</p>
+
+                <p className="mt-1 max-w-xl text-sm text-slate-500">
+                  Controls the charge for revealing a job&apos;s phone number and
+                  email. When OFF, job contact details stay free for everyone.
+                  This switch is completely independent of Requirement Payments and
+                  of Donation/Support Payments - saving it never changes either of
+                  those.
+                </p>
+              </div>
+
+              <span
+                className={`rounded-full px-4 py-1.5 text-sm font-bold ${
+                  jobContactSavedEnabled
+                    ? "bg-green-100 text-green-700"
+                    : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                {jobContactSavedEnabled ? "ON" : "OFF"}
+              </span>
+            </div>
+
+            {jobContactLoading ? (
+              <p className="mt-5 text-sm text-slate-500">
+                Loading Job Contact Access setting...
+              </p>
+            ) : (
+              <>
+                <div className="mt-5">
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                    <input
+                      type="checkbox"
+                      checked={jobContactEnabled}
+                      onChange={(event) => setJobContactEnabled(event.target.checked)}
+                      className="h-5 w-5"
+                    />
+
+                    <span className="font-semibold text-slate-700">
+                      Enable Job Contact Access
+                    </span>
+                  </label>
+                </div>
+
+                <div className="mt-5 max-w-xs">
+                  <label
+                    htmlFor="job-contact-amount"
+                    className="block text-sm font-semibold text-slate-700"
+                  >
+                    Unlock amount (INR)
+                  </label>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-lg font-semibold text-slate-500">
+                      &#8377;
+                    </span>
+
+                    <input
+                      id="job-contact-amount"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={jobContactAmount}
+                      onChange={(event) => setJobContactAmount(event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-500">
+                    Currency is fixed to INR. Saved amount: &#8377;
+                    {jobContactSavedAmount}
+                  </p>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() => void handleJobContactSave()}
+                    disabled={jobContactSaving}
+                    className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {jobContactSaving
+                      ? "Saving..."
+                      : "Save job contact access setting"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {jobContactErrorMessage && (
+              <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {jobContactErrorMessage}
+              </div>
+            )}
+
+            {jobContactStatusMessage && (
+              <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                {jobContactStatusMessage}
+              </div>
+            )}
           </div>
         </>
       )}

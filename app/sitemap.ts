@@ -30,6 +30,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/jobs`,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/privacy`,
       changeFrequency: "yearly",
       priority: 0.3,
@@ -55,6 +60,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${baseUrl}/teachers/${teacher.id}`,
         changeFrequency: "weekly",
         priority: 0.8,
+      });
+    }
+  } catch {
+    // Keep static entries when Supabase cannot be reached.
+  }
+
+  // Public job listing + every published/closed job detail page. Drafts are
+  // never readable by anon, so they can never be indexed.
+  try {
+    const { data } = await supabase
+      .from("jobs")
+      .select("slug, id, updated_at")
+      .in("status", ["published", "closed"]);
+
+    for (const job of (data as
+      | { slug: string | null; id: string; updated_at: string | null }[]
+      | null) || []) {
+      entries.push({
+        url: `${baseUrl}/jobs/${job.slug || job.id}`,
+        lastModified: job.updated_at ? new Date(job.updated_at) : undefined,
+        changeFrequency: "weekly",
+        priority: 0.7,
       });
     }
   } catch {

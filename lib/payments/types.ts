@@ -40,6 +40,39 @@ export type PaymentSettingsRow = {
   payment_currency?: string | null;
 };
 
+/**
+ * Resolved admin-controlled Job Contact Access configuration
+ * (public.get_job_contact_payment_settings()).
+ *
+ * Deliberately separate from both PaymentSettings and SupportPaymentSettings:
+ * unlocking a job's phone/email is its own product decision with its own
+ * switch and its own price, so turning it on or off can never change the
+ * requirement payment switch or the donation switch (and vice versa).
+ */
+export type JobContactPaymentSettings = {
+  enabled: boolean;
+  amount: number;
+  currency: "INR";
+};
+
+/**
+ * Safe default: Job Contact Access is OFF and priced at the default INR 10.
+ * Any read failure therefore means "contact details stay free" rather than
+ * silently charging a visitor.
+ */
+export const DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS: JobContactPaymentSettings = {
+  enabled: false,
+  amount: 10,
+  currency: "INR",
+};
+
+/** Raw row shape returned by the public.get_job_contact_payment_settings() RPC. */
+export type JobContactPaymentSettingsRow = {
+  job_contact_enabled?: boolean | null;
+  job_contact_amount?: number | string | null;
+  job_contact_currency?: string | null;
+};
+
 function toFiniteNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -75,6 +108,30 @@ export function normalizePaymentSettings(
     enabled: row.payment_enabled === true && amount > 0,
     amount: amount > 0 ? amount : 0,
     currency,
+  };
+}
+
+/**
+ * Normalizes a raw job contact settings row into a safe
+ * JobContactPaymentSettings.
+ *
+ * The currency is pinned to INR (the database enforces it too) and the switch
+ * can only report enabled when there is a usable positive amount - a half
+ * configured setting must never present a broken price to a visitor.
+ */
+export function normalizeJobContactPaymentSettings(
+  row: JobContactPaymentSettingsRow | null | undefined,
+): JobContactPaymentSettings {
+  if (!row) {
+    return DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS;
+  }
+
+  const amount = toFiniteNumber(row.job_contact_amount);
+
+  return {
+    enabled: row.job_contact_enabled === true && amount > 0,
+    amount: amount > 0 ? amount : DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS.amount,
+    currency: "INR",
   };
 }
 

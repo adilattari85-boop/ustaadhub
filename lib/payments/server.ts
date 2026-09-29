@@ -14,7 +14,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 import {
+  DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS,
+  normalizeJobContactPaymentSettings,
   normalizePaymentSettings,
+  type JobContactPaymentSettings,
+  type JobContactPaymentSettingsRow,
   type PaymentSettings,
   type PaymentSettingsRow,
 } from "./types";
@@ -183,6 +187,52 @@ export async function readPaymentSettings(): Promise<PaymentSettings | null> {
     );
 
     return null;
+  }
+}
+
+/**
+ * Reads the admin-controlled Job Contact Access configuration.
+ *
+ * This reads ONLY the 'job_contact_payment' settings row through
+ * public.get_job_contact_payment_settings(); it never touches the requirement
+ * 'payment' row or the 'support_payment' row. That separation is what makes the
+ * job contact switch independent of both existing payment switches.
+ *
+ * Returns null only when the server has no service role client (i.e. the
+ * database is unreachable from here). An RPC error or an empty result resolves
+ * to the safe OFF default, so a misconfigured setting can never start charging
+ * visitors.
+ */
+export async function readJobContactPaymentSettings(): Promise<JobContactPaymentSettings | null> {
+  const client = createServiceClient();
+
+  if (!client) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await client.rpc("get_job_contact_payment_settings");
+    const row = Array.isArray(data)
+      ? (data[0] as JobContactPaymentSettingsRow | undefined)
+      : (data as JobContactPaymentSettingsRow | null);
+
+    if (error) {
+      console.error(
+        "[payments] could not read job contact payment settings:",
+        error.message,
+      );
+
+      return DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS;
+    }
+
+    return normalizeJobContactPaymentSettings(row);
+  } catch (err) {
+    console.error(
+      "[payments] job contact payment settings read error:",
+      err instanceof Error ? err.message : "unknown error",
+    );
+
+    return DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS;
   }
 }
 

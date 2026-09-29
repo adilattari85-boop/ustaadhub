@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import MatchedTeacherSection from "@/components/MatchedTeacherSection";
 import AdminPaymentSettings from "@/components/AdminPaymentSettings";
+import AdminJobsManager from "@/components/AdminJobsManager";
 import AdminSupportPayments from "@/components/AdminSupportPayments";
 
 type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
@@ -769,6 +770,11 @@ async function connectTeacherToRequirement(
       {/* PAYMENT GATEWAY SETTING (admin-only) */}
       <div className="mx-auto max-w-7xl px-6 pb-10">
         <AdminPaymentSettings />
+      </div>
+
+      {/* JOBS & OPPORTUNITIES (admin-only) */}
+      <div className="mx-auto max-w-7xl px-6 pb-10">
+        <AdminJobsManager />
       </div>
 
       {/* SUPPORT PAYMENTS - donations & sponsorships (admin-only) */}

@@ -1,5 +1,11 @@
 import { getPaymentGatewayConfig, toMinorUnits } from "@/lib/payments/config";
 import {
+  applyJobContactUnlockResult,
+  findJobContactUnlockByOrderId,
+  toMinorUnitsFromRupees,
+  type JobContactLedgerRow,
+} from "@/lib/payments/jobContact";
+import {
   captureGatewayPayment,
   verifyWebhookSignature,
 } from "@/lib/payments/razorpay";
@@ -182,6 +188,150 @@ async function applyEventToSupportLedger(
   return jsonResponse({ status: "ignored" });
 }
 
+/**
+ * Applies a signed gateway event to the "Job Contact Access" ledger
+ * (public.job_contact_unlocks) when the order id is in NEITHER public.payments
+ * NOR the support ledger.
+ *
+ * Narrowly scoped by design:
+ *  - it only ever reads/updates job_contact_unlocks, so public.payments and
+ *    support_payments are untouched,
+ *  - it is only reached for an order id that is unknown to BOTH existing
+ *    ledgers, so no existing payment can ever be re-routed here,
+ *  - the reported amount/currency are cross-checked against OUR recorded row,
+ *  - only a captured payment may be marked paid,
+ *  - every transition is idempotent (see applyJobContactUnlockResult).
+ *
+ * Returns null when the order is unknown to this ledger either, so the caller
+ * can answer "ignored" exactly as before.
+ */
+async function applyEventToJobContactLedger(
+  config: NonNullable<ReturnType<typeof getPaymentGatewayConfig>>,
+  event: NormalizedEvent,
+): Promise<ReturnType<typeof jsonResponse> | null> {
+  const unlock: JobContactLedgerRow | null =
+    await findJobContactUnlockByOrderId(event.orderId);
+
+  if (!unlock) {
+    return null;
+  }
+
+  // No purpose column is needed on the row: a row can only exist in this table
+  // because public.admin_update_job_contact_payment_settings / the order route
+  // created a job-contact unlock, and the table is the purpose boundary.
+
+  const expectedMinorUnits = toMinorUnitsFromRupees(unlock.amount);
+
+  if (
+    event.amountMinorUnits !== null &&
+    event.amountMinorUnits !== expectedMinorUnits
+  ) {
+    console.warn(
+      "[payments/webhook] job contact event amount does not match the recorded amount; no state change.",
+    );
+
+    return jsonResponse({ status: "amount_mismatch" });
+  }
+
+  if (
+    event.currency !== null &&
+    event.currency.toUpperCase() !== unlock.currency.toUpperCase()
+  ) {
+    console.warn(
+      "[payments/webhook] job contact event currency does not match the recorded currency; no state change.",
+    );
+
+    return jsonResponse({ status: "currency_mismatch" });
+  }
+
+  const isSuccessEvent =
+    event.eventType === "payment.captured" ||
+    event.eventType === "order.paid";
+  const isAuthorizedEvent = event.eventType === "payment.authorized";
+  const isFailedEvent = event.eventType === "payment.failed";
+
+  if (isSuccessEvent) {
+    if (!event.paymentId) {
+      return jsonResponse({ status: "ignored" });
+    }
+
+    // 'authorized' has not moved money yet: only a captured payment unlocks.
+    if (event.gatewayStatus && event.gatewayStatus !== "captured") {
+      return jsonResponse({ status: "not_captured" });
+    }
+
+    const outcome = await applyJobContactUnlockResult({
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      status: "paid",
+    });
+
+    if (!outcome.ok) {
+      await forgetWebhookEvent(event.eventId);
+
+      return jsonResponse({ error: outcome.reason }, 500);
+    }
+
+    // outcome.applied=false is an already-settled unlock, which is a success.
+    return jsonResponse({ status: "paid", applied: outcome.applied });
+  }
+
+  if (isAuthorizedEvent) {
+    if (!event.paymentId) {
+      return jsonResponse({ status: "ignored" });
+    }
+
+    // Manual-capture gateway accounts: try to capture server-side. The capture
+    // event (or the browser verification route) is the fallback.
+    const capture = await captureGatewayPayment(config, {
+      paymentId: event.paymentId,
+      amountMinorUnits: expectedMinorUnits,
+      currency: unlock.currency,
+    });
+
+    if (!capture.ok || capture.data.status !== "captured") {
+      console.error(
+        "[payments/webhook] authorized job contact payment could not be captured; waiting for the capture event.",
+      );
+
+      return jsonResponse({ status: "not_captured" });
+    }
+
+    const outcome = await applyJobContactUnlockResult({
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      status: "paid",
+    });
+
+    if (!outcome.ok) {
+      await forgetWebhookEvent(event.eventId);
+
+      return jsonResponse({ error: outcome.reason }, 500);
+    }
+
+    return jsonResponse({ status: "paid", applied: outcome.applied });
+  }
+
+  if (isFailedEvent) {
+    const outcome = await applyJobContactUnlockResult({
+      orderId: event.orderId,
+      paymentId: event.paymentId,
+      status: "failed",
+      failureReason: event.failureReason,
+    });
+
+    if (!outcome.ok) {
+      await forgetWebhookEvent(event.eventId);
+
+      return jsonResponse({ error: outcome.reason }, 500);
+    }
+
+    return jsonResponse({ status: "failed", applied: outcome.applied });
+  }
+
+  return jsonResponse({ status: "ignored" });
+}
+
 function asRecord(value: unknown): JsonRecord | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
@@ -337,6 +487,18 @@ export async function POST(request: Request) {
 
       if (supportResponse) {
         return supportResponse;
+      }
+
+      // ...or a "Job Contact Access" unlock, which lives in its own ledger.
+      // Checked last so an existing requirement or support payment can never
+      // be claimed by this branch.
+      const jobContactResponse = await applyEventToJobContactLedger(
+        config,
+        event,
+      );
+
+      if (jobContactResponse) {
+        return jobContactResponse;
       }
 
       console.warn(
