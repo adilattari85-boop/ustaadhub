@@ -2,11 +2,14 @@ import { getPaymentGatewayConfig, toMinorUnits } from "@/lib/payments/config";
 import {
   applyJobContactUnlockResult,
   findJobContactUnlockByOrderId,
+  isJobContactLedgerAvailable,
   toMinorUnitsFromRupees,
   type JobContactLedgerRow,
 } from "@/lib/payments/jobContact";
 import {
   captureGatewayPayment,
+  fetchGatewayOrder,
+  fetchGatewayPayment,
   verifyWebhookSignature,
 } from "@/lib/payments/razorpay";
 import {
@@ -54,6 +57,12 @@ type NormalizedEvent = {
   currency: string | null;
   gatewayStatus: string | null;
   failureReason: string | null;
+  /**
+   * True when the event described an ORDER rather than a payment ("order.paid"),
+   * so no payment id was present in the body and the amount/currency/status
+   * below come from the order entity instead of a payment entity.
+   */
+  orderLevel: boolean;
 };
 
 const MAX_EVENT_ID_LENGTH = 200;
@@ -213,6 +222,20 @@ async function applyEventToJobContactLedger(
     await findJobContactUnlockByOrderId(event.orderId);
 
   if (!unlock) {
+    // Only a healthy lookup can conclude "not my order". If the service-role
+    // client could not be built the lookup never ran, so acknowledging here
+    // would discard a real payment as an unrelated order - answer retryably
+    // instead, after releasing the claim taken earlier in the handler.
+    if (!isJobContactLedgerAvailable()) {
+      await forgetWebhookEvent(event.eventId);
+
+      console.error(
+        "[payments/webhook] service-role client unavailable; the job contact lookup did not run. Releasing the claim for a retry.",
+      );
+
+      return jsonResponse({ error: "server_not_configured" }, 500);
+    }
+
     return null;
   }
 
@@ -358,6 +381,20 @@ function extractPaymentEntity(body: JsonRecord): JsonRecord | null {
   return asRecord(payment?.entity);
 }
 
+/**
+ * Pulls the ORDER entity out of the gateway's webhook envelope.
+ *
+ * "order.paid" payloads contain payload.order.entity and nothing under
+ * payload.payment, so reading only the payment entity loses the order id and
+ * the event gets acknowledged and thrown away.
+ */
+function extractOrderEntity(body: JsonRecord): JsonRecord | null {
+  const payload = asRecord(body.payload);
+  const order = asRecord(payload?.order);
+
+  return asRecord(order?.entity);
+}
+
 function normalizeEvent(
   request: Request,
   body: JsonRecord,
@@ -369,9 +406,17 @@ function normalizeEvent(
   }
 
   const accountId = readString(body, "account_id") ?? "unknown";
-  const entity = extractPaymentEntity(body);
-  const paymentId = readString(entity, "id");
-  const orderId = readString(entity, "order_id");
+
+  // Payment-level events ("payment.captured", ...) carry payload.payment.entity.
+  // Order-level events ("order.paid") carry payload.order.entity and NO payment
+  // object at all, so the order id has to be read from the order entity.
+  const paymentEntity = extractPaymentEntity(body);
+  const paymentId = readString(paymentEntity, "id");
+  const orderEntity = paymentEntity ? null : extractOrderEntity(body);
+  const orderId =
+    readString(paymentEntity, "order_id") ?? readString(orderEntity, "id") ?? "";
+  const orderLevel = paymentEntity === null && orderEntity !== null;
+  const entity = paymentEntity ?? orderEntity;
   const headerEventId =
     request.headers.get("x-razorpay-event-id")?.trim() ?? "";
 
@@ -380,21 +425,82 @@ function normalizeEvent(
   const eventId =
     headerEventId !== "" && headerEventId.length <= MAX_EVENT_ID_LENGTH
       ? headerEventId
-      : `${eventType}:${accountId}:${orderId ?? "no-order"}:${
-          paymentId ?? "no-payment"
+      : `${eventType}:${accountId}:${orderId || "no-order"}:${
+          paymentId || "no-payment"
         }`;
 
   return {
     eventId,
     eventType,
-    orderId: orderId ?? "",
+    orderId,
     paymentId,
     amountMinorUnits: readNumber(entity, "amount"),
     currency: readString(entity, "currency"),
-    gatewayStatus: readString(entity, "status"),
+    // For an order-level event an ORDER status ("paid") is not a PAYMENT status
+    // ("captured"); it is resolved against the real payment instead, so it must
+    // never satisfy the captured check below.
+    gatewayStatus: orderLevel ? null : readString(entity, "status"),
     failureReason:
       readString(entity, "error_description") ??
       readString(entity, "error_code"),
+    orderLevel,
+  };
+}
+
+/**
+ * Turns an order-level event into an equivalent payment-level event.
+ *
+ * "order.paid" arrives as payload.order.entity: there is no payment id, no
+ * payment status and no reliable payment amount in the body. The payment is
+ * therefore looked up on the gateway using the existing client (same config /
+ * credential set), preferring a payment id the order itself already reports and
+ * falling back to fetching the order.
+ *
+ * The returned event keeps the original event id (so idempotency is unchanged)
+ * but carries the payment id and the authoritative amount/currency/status, which
+ * lets the existing success path - and all three ledgers - run untouched.
+ *
+ * A failure is returned instead of an "ignored" response because the event has
+ * already been claimed: acknowledging something we could not process would lose
+ * the payment permanently.
+ */
+async function resolveOrderLevelPayment(
+  config: NonNullable<ReturnType<typeof getPaymentGatewayConfig>>,
+  event: NormalizedEvent,
+): Promise<{ ok: true; event: NormalizedEvent } | { ok: false; reason: string }> {
+  const order = await fetchGatewayOrder(config, event.orderId);
+
+  if (!order.ok) {
+    return { ok: false, reason: `order_lookup_${order.reason}` };
+  }
+
+  const paymentId = order.data.paymentIds[0] ?? null;
+
+  if (!paymentId) {
+    return { ok: false, reason: "payment_id_unavailable" };
+  }
+
+  const payment = await fetchGatewayPayment(config, paymentId);
+
+  if (!payment.ok) {
+    return { ok: false, reason: `payment_lookup_${payment.reason}` };
+  }
+
+  // The payment we just fetched must belong to the order we were told about.
+  if (payment.data.orderId && payment.data.orderId !== event.orderId) {
+    return { ok: false, reason: "payment_order_mismatch" };
+  }
+
+  return {
+    ok: true,
+    event: {
+      ...event,
+      paymentId: payment.data.id,
+      amountMinorUnits: payment.data.amount,
+      currency: payment.data.currency,
+      gatewayStatus: payment.data.status,
+      orderLevel: false,
+    },
   };
 }
 
@@ -449,7 +555,7 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "invalid_request" }, 400);
   }
 
-  const event = normalizeEvent(request, body);
+  let event = normalizeEvent(request, body);
 
   if (!event) {
     return jsonResponse({ status: "ignored" });
@@ -475,6 +581,31 @@ export async function POST(request: Request) {
     if (event.orderId === "") {
       // Nothing we can act on (for example a payout event).
       return jsonResponse({ status: "ignored" });
+    }
+
+    // An ORDER-level event ("order.paid") carries no payment id and no payment
+    // status, so the real payment is resolved from the gateway BEFORE any ledger
+    // is consulted. This keeps every existing amount/currency/captured check
+    // intact - they now run against the payment the gateway actually reports,
+    // instead of being skipped or fed an order status.
+    if (event.orderLevel) {
+      const resolution = await resolveOrderLevelPayment(config, event);
+
+      if (!resolution.ok) {
+        // We have already claimed this event id. Returning 200 here would
+        // permanently discard a real payment, so release the claim and answer
+        // with a retryable error: the gateway will redeliver.
+        await forgetWebhookEvent(event.eventId);
+
+        console.warn(
+          "[payments/webhook] order-level event could not be resolved; releasing the claim for a retry:",
+          resolution.reason,
+        );
+
+        return jsonResponse({ error: resolution.reason }, 500);
+      }
+
+      event = resolution.event;
     }
 
     // Cross-check the event against OUR ledger before any state change.

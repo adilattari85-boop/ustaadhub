@@ -79,6 +79,18 @@ function toLedgerRow(row: Record<string, unknown>): JobContactLedgerRow {
 }
 
 /**
+ * Whether the service-role client needed to read our ledger is available.
+ *
+ * The webhook uses this to tell "this order is not mine" apart from "I could not
+ * look it up". Without it an infrastructure outage would be reported as an
+ * unrelated order and the event would be answered 200 and silently dropped,
+ * stranding a real paid unlock in 'created'.
+ */
+export function isJobContactLedgerAvailable(): boolean {
+  return createServiceClient() !== null;
+}
+
+/**
  * Reads our own job-contact unlock row for a gateway order id.
  *
  * The verification route and the webhook both use this to compare the gateway

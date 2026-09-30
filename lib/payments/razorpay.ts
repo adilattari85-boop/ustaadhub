@@ -25,6 +25,19 @@ export type GatewayOrder = {
   receipt: string | null;
 };
 
+/** An order re-read from the gateway, including the payments made against it. */
+export type GatewayOrderDetail = {
+  id: string;
+  /** Payment ids the gateway has recorded against this order, if any. */
+  paymentIds: string[];
+  /** Order amount in the smallest currency unit (paise for INR). */
+  amount: number;
+  /** Amount actually paid, in the smallest currency unit. */
+  amountPaid: number;
+  currency: string;
+  status: string;
+};
+
 export type GatewayPayment = {
   id: string;
   orderId: string | null;
@@ -208,6 +221,71 @@ export async function fetchGatewayPayment(
       status: readString(result.data, "status") ?? "unknown",
       errorCode: readString(result.data, "error_code"),
       errorDescription: readString(result.data, "error_description"),
+    },
+  };
+}
+
+/**
+ * Loads an order from the gateway, including the payments made against it.
+ *
+ * Needed for order-level events ("order.paid"): those payloads carry
+ * payload.order.entity and no payment object at all, so the payment id has to
+ * be resolved from the gateway instead of from the event body. Reuses the same
+ * gatewayRequest/config plumbing as every other call, so no second credential
+ * system is introduced.
+ */
+export async function fetchGatewayOrder(
+  config: PaymentGatewayConfig,
+  orderId: string,
+): Promise<GatewayResult<GatewayOrderDetail>> {
+  const result = await gatewayRequest(
+    config,
+    `/orders/${encodeURIComponent(orderId)}`,
+    { method: "GET" },
+  );
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const id = readString(result.data, "id");
+
+  if (!id) {
+    return { ok: false, reason: "gateway_invalid_response" };
+  }
+
+  // Razorpay returns an array of payment OBJECTS here (GET /orders/:id); other
+  // payloads only ever carry ids. Accept both so a single stray shape cannot
+  // silently produce an empty list.
+  const payments: string[] = [];
+
+  if (Array.isArray(result.data.payments)) {
+    for (const entry of result.data.payments as unknown[]) {
+      const id =
+        typeof entry === "string"
+          ? entry
+          : readString(
+              entry && typeof entry === "object"
+                ? (entry as JsonRecord)
+                : null,
+              "id",
+            );
+
+      if (id && id.trim() !== "") {
+        payments.push(id.trim());
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      id,
+      paymentIds: payments,
+      amount: readNumber(result.data, "amount") ?? 0,
+      amountPaid: readNumber(result.data, "amount_paid") ?? 0,
+      currency: readString(result.data, "currency") ?? "",
+      status: readString(result.data, "status") ?? "unknown",
     },
   };
 }
