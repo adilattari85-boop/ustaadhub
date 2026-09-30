@@ -3,61 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  FaBriefcase,
-  FaClipboardList,
-  FaCreditCard,
-  FaUserCheck,
-  FaUsers,
-} from "react-icons/fa";
 import { supabase } from "@/lib/supabase";
+import AdminPaymentSettings from "@/components/AdminPaymentSettings";
+import AdminSupportPayments from "@/components/AdminSupportPayments";
 
-// The admin area is menu-driven: this page is the overview/hub only. Every
-// functional area now has its own route, so this page links to them rather
-// than re-querying or re-rendering any of that data.
-const sections = [
-  {
-    href: "/admin/requirements",
-    label: "Learning Requirements",
-    description:
-      "Review incoming teacher requests, update their status and match a teacher.",
-    icon: FaClipboardList,
-  },
-  {
-    href: "/admin/teachers",
-    label: "Teacher Verification",
-    description:
-      "Review teacher information and approve or reject verification.",
-    icon: FaUserCheck,
-  },
-  {
-    href: "/admin/users",
-    label: "All Users",
-    description: "Browse every registered student and teacher account.",
-    icon: FaUsers,
-  },
-  {
-    href: "/admin/jobs",
-    label: "Jobs & Opportunities",
-    description: "Create, edit, publish, close and pin job listings.",
-    icon: FaBriefcase,
-  },
-  {
-    href: "/admin/payments",
-    label: "Payments & Settings",
-    description:
-      "Payment gateway, support payments and paid job contact access.",
-    icon: FaCreditCard,
-  },
-];
-
-export default function AdminPage() {
+// Dedicated home for the payment-related admin controls. Both components are
+// used exactly as they were on /admin - they keep their own loading, validation
+// and Supabase writes, and nothing about the gateway, support payments or job
+// contact access settings changes by moving them here.
+export default function AdminPaymentsPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authenticating, setAuthenticating] = useState(true);
 
-  // Same client-side admin guard used by the other admin pages. Authorization
-  // itself is still enforced in the database.
+  // Same client-side admin guard used by app/admin/users, app/admin/jobs and
+  // app/admin/requirements. Real authorization stays in the database.
   async function verifyAdmin() {
     const {
       data: { user },
@@ -126,7 +86,7 @@ export default function AdminPage() {
             <Link href="/" className="text-2xl font-bold text-blue-700">
               UstaadHub
             </Link>
-            <p className="text-sm text-slate-500">Admin Dashboard</p>
+            <p className="text-sm text-slate-500">Payments &amp; Settings</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -148,45 +108,26 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* DASHBOARD */}
+      {/* MAIN */}
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="mb-8">
           <p className="font-semibold text-blue-600">ADMIN PANEL</p>
 
           <h1 className="mt-1 text-3xl font-bold md:text-4xl">
-            Dashboard
+            Payments &amp; Settings
           </h1>
 
           <p className="mt-2 text-slate-600">
-            Manage student and parent teacher requests, verify teachers, review
-            users, publish jobs and control payment settings.
+            Control the requirement payment gateway, support payments for
+            donations and sponsorships, and paid job contact access. Turning the
+            gateway off keeps requirement submission free, exactly as before.
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {sections.map((section) => {
-            const Icon = section.icon;
+        <AdminPaymentSettings />
 
-            return (
-              <Link
-                key={section.href}
-                href={section.href}
-                className="group rounded-2xl border bg-white p-6 shadow-sm transition hover:border-blue-300 hover:shadow-md"
-              >
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
-                  <Icon className="h-5 w-5" />
-                </span>
-
-                <p className="mt-4 text-lg font-bold text-slate-900">
-                  {section.label}
-                </p>
-
-                <p className="mt-1 text-sm text-slate-600">
-                  {section.description}
-                </p>
-              </Link>
-            );
-          })}
+        <div className="mt-10">
+          <AdminSupportPayments />
         </div>
       </section>
     </main>

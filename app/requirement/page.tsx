@@ -58,7 +58,7 @@ const copy = {
     browseTeachers: "Browse Teachers",
     backToHome: "← Back to Home",
     pageTitle: "Find the Right Teacher",
-    pageDesc: "Tell us what you want to learn and your preferred teacher.",
+    pageDesc: "Tell us your learning needs and we'll help you find the right teacher.",
     studentInfo: "Student Information",
     nameLabel: "Student / Parent Name *",
     namePlaceholder: "Enter name",
@@ -156,6 +156,36 @@ const copy = {
       "جمع کرنے سے، آپ اس بات سے متفق ہیں کہ UstaadHub آپ کی تعلیمی ضرورت کے سلسلے میں آپ سے رابطہ کر سکتا ہے۔",
   },
 };
+// ---------------------------------------------------------------------------
+// Requirement-page heading
+// ---------------------------------------------------------------------------
+// The course chosen on the landing page is already carried into this page
+// through the `?course=` query param (handled in the effect below), so the
+// heading can name it directly: "Find an Arabic Teacher". When the page is
+// opened without a course - e.g. typed in directly, or the param is missing -
+// it keeps the original static title.
+function buildPageTitle(course: string): string {
+  const trimmedCourse = course.trim();
+
+  if (!trimmedCourse) {
+    return copy.en.pageTitle;
+  }
+
+  // Some course names already end in the word "Course" ("Qaida Course",
+  // "Darse Nizami/aalim course"), which would otherwise read as "Find a Qaida
+  // Course Teacher". Drop that trailing word so the sentence reads naturally.
+  // Matched case-insensitively because the course list is not consistent about
+  // the capital "C". The leading \s+ is required, so a course literally named
+  // "Course" is left intact rather than being reduced to an empty subject.
+  const subject = trimmedCourse.replace(/\s+Course$/i, "");
+
+  // "an" before a vowel-initial name ("Arabic", "English"), "a" otherwise.
+  // Stripping only removes a trailing word, so the first letter - and
+  // therefore the article - is unaffected for every other course name.
+  const article = /^[aeiou]/i.test(subject) ? "an" : "a";
+
+  return `Find ${article} ${subject} Teacher`;
+}
 // ---------------------------------------------------------------------------
 // Payment-flow session helpers
 // ---------------------------------------------------------------------------
@@ -859,7 +889,7 @@ console.log(
           </a>
 
           <h1 className="mt-6 text-4xl font-bold">
-            {isUrdu ? copy.ur.pageTitle : copy.en.pageTitle}
+            {isUrdu ? copy.ur.pageTitle : buildPageTitle(selectedCourse)}
           </h1>
 
           <p className="mt-2 text-slate-600">

@@ -1,0 +1,1140 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
+type Requirement = {
+  id: string;
+  user_id: string;
+  parent_student_name: string | null;
+  mobile_number: string | null;
+  student_age: number | null;
+  student_gender: string | null;
+  subjects: string[] | null;
+  current_level: string | null;
+  class_mode: string | null;
+  teacher_gender: string | null;
+  preferred_languages: string[] | null;
+  classes_per_week: string | null;
+  preferred_time: string | null;
+  preferred_days: string | null;
+  monthly_budget: number | null;
+  city_location: string | null;
+  additional_requirement: string | null;
+  created_at: string;
+  updated_at: string | null;
+  status: RequirementStatus;
+  deleted_at: string | null;
+};
+type Teacher = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  subjects: string[] | null;
+  gender: string | null;
+  qualification: string | null;
+  city_location: string | null;
+  is_verified: boolean;
+};
+
+const statuses: Array<"All" | RequirementStatus> = [
+  "All",
+  "pending",
+  "contacted",
+  "matched",
+  "closed",
+];
+
+const requirementColumns =
+  "id, user_id, parent_student_name, mobile_number, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, monthly_budget, city_location, additional_requirement, created_at, updated_at, status, deleted_at";
+
+export default function AdminRequirementsPage() {
+  const router = useRouter();
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [selectedRequirement, setSelectedRequirement] =
+    useState<Requirement | null>(null);
+  const [filter, setFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+const [showTeacherMatcher, setShowTeacherMatcher] = useState(false);
+const [teacherLoading, setTeacherLoading] = useState(false);
+  const [requirementActionId, setRequirementActionId] = useState<string | null>(null);
+  const [requirementActionError, setRequirementActionError] = useState("");
+const [connectingTeacherId, setConnectingTeacherId] =
+  useState<string | null>(null);
+
+  async function verifyAdmin() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      router.replace("/admin/login");
+      return false;
+    }
+
+    const { data: isAdmin, error: adminError } =
+      await supabase.rpc("is_admin");
+
+    if (adminError || !isAdmin) {
+      await supabase.auth.signOut();
+      router.replace("/admin/login");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function loadRequirements() {
+    setLoading(true);
+    setError("");
+
+    try {
+      if (!(await verifyAdmin())) return;
+
+      const { data, error: requirementsError } = await supabase
+        .from("learning_requirements")
+        .select(requirementColumns)
+        .order("created_at", { ascending: false });
+
+      if (requirementsError) {
+        setError(requirementsError.message);
+        setRequirements([]);
+        return;
+      }
+
+      setRequirements((data || []) as Requirement[]);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while loading requirements."
+      );
+      setRequirements([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+async function loadVerifiedTeachers() {
+  setTeacherLoading(true);
+  setError("");
+
+
+
+
+  const { data, error: teacherError } = await supabase
+    .from("teacher_profiles")
+    .select(
+      "id, full_name, email, phone, subjects, gender, qualification, city_location, is_verified"
+    )
+    .eq("is_verified", true)
+    .order("full_name", { ascending: true });
+
+  if (teacherError) {
+    console.error("TEACHER LOAD ERROR:", teacherError);
+    setError(`Could not load teachers: ${teacherError.message}`);
+    setTeachers([]);
+    setTeacherLoading(false);
+    return;
+  }
+
+  setTeachers((data || []) as Teacher[]);
+  setTeacherLoading(false);
+}
+async function connectTeacherToRequirement(
+  requirement: Requirement,
+  teacher: Teacher
+) {
+  setConnectingTeacherId(teacher.id);
+  setError("");
+
+  const { error: rpcError } = await supabase.rpc("admin_connect_teacher_to_requirement", {
+    p_requirement_id: requirement.id,
+    p_teacher_id: teacher.id,
+  });
+
+  if (rpcError) {
+    console.error("TEACHER MATCH ERROR:", rpcError);
+    setError(
+      rpcError.message
+        ? `Could not connect teacher: ${rpcError.message}`
+        : "Could not connect teacher."
+    );
+    setConnectingTeacherId(null);
+    return;
+  }
+
+  setRequirements((current) =>
+    current.map((item) =>
+      item.id === requirement.id
+        ? { ...item, status: "matched" }
+        : item
+    )
+  );
+
+  setSelectedRequirement({
+    ...requirement,
+    status: "matched",
+  });
+
+  setShowTeacherMatcher(false);
+  setConnectingTeacherId(null);
+
+  alert(
+    `${teacher.full_name || "Teacher"} has been connected successfully.`
+  );
+}
+  async function updateStatus(
+    requirement: Requirement,
+    status: RequirementStatus
+  ) {
+    setStatusUpdating(true);
+    setError("");
+
+    const { data, error: updateError } = await supabase
+      .from("learning_requirements")
+      .update({ status })
+      .eq("id", requirement.id)
+      .select(requirementColumns)
+      .single();
+
+    if (updateError) {
+      setError(updateError.message);
+      setStatusUpdating(false);
+      return;
+    }
+
+    const updatedRequirement = data as Requirement;
+
+    setRequirements((current) =>
+      current.map((item) =>
+        item.id === updatedRequirement.id ? updatedRequirement : item
+      )
+    );
+    setSelectedRequirement(updatedRequirement);
+    setStatusUpdating(false);
+  }
+
+  async function handleDeactivateRequirement(requirement: Requirement) {
+    if (!confirm(`Deactivate requirement for "${requirement.parent_student_name || "this student"}"?\n\nThis will hide it from active lists. Associated matches, class sessions, and attendance history will be preserved.`)) {
+      return;
+    }
+    setRequirementActionId(requirement.id);
+    setRequirementActionError("");
+    setError("");
+
+    const { error: rpcError } = await supabase.rpc(
+      "admin_deactivate_requirement",
+      { p_requirement_id: requirement.id },
+    );
+
+    if (rpcError) {
+      setRequirementActionError(rpcError.message || "Failed to deactivate requirement.");
+      setRequirementActionId(null);
+      return;
+    }
+
+    await loadRequirements();
+    if (selectedRequirement?.id === requirement.id) {
+      const updated = requirements.find((r) => r.id === requirement.id) ?? null;
+      setSelectedRequirement(updated);
+    }
+    setRequirementActionId(null);
+  }
+
+  async function handleRestoreRequirement(requirement: Requirement) {
+    if (!confirm(`Restore requirement for "${requirement.parent_student_name || "this student"}"?\n\nIt will reappear in active lists.`)) {
+      return;
+    }
+    setRequirementActionId(requirement.id);
+    setRequirementActionError("");
+    setError("");
+
+    const { error: rpcError } = await supabase.rpc(
+      "admin_restore_requirement",
+      { p_requirement_id: requirement.id },
+    );
+
+    if (rpcError) {
+      setRequirementActionError(rpcError.message || "Failed to restore requirement.");
+      setRequirementActionId(null);
+      return;
+    }
+
+    await loadRequirements();
+    if (selectedRequirement?.id === requirement.id) {
+      const updated = requirements.find((r) => r.id === requirement.id) ?? null;
+      setSelectedRequirement(updated);
+    }
+    setRequirementActionId(null);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace("/admin/login");
+  }
+
+
+  const getStatus = (item: Requirement): RequirementStatus =>
+    item.status || "pending";
+
+  const countByStatus = (status: RequirementStatus) =>
+    requirements.filter((item) => getStatus(item) === status).length;
+
+  const filteredRequirements =
+    filter === "All"
+      ? requirements
+      : requirements.filter((item) => getStatus(item) === filter);
+
+  function formatBudget(budget: number | null) {
+    if (budget === null || budget === undefined) {
+      return "Not specified";
+    }
+
+    return `₹${budget.toLocaleString("en-IN")}/month`;
+  }
+
+  function formatDate(date: string) {
+    if (!date) return "-";
+
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  // Admin auth guard, matching the pattern already used by
+  // app/admin/users/page.tsx and app/admin/jobs/page.tsx. Authorization is
+  // still enforced in the database; this only avoids rendering the page to
+  // non-admin visitors. loadRequirements() still re-checks via verifyAdmin(),
+  // which keeps the existing "Try Again" behaviour unchanged.
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [authenticating, setAuthenticating] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function authorizeAndLoad() {
+      const ok = await verifyAdmin();
+
+      if (!active) return;
+
+      if (!ok) {
+        setAuthenticating(false);
+        return;
+      }
+
+      setIsAuthorized(true);
+      setAuthenticating(false);
+      await loadRequirements();
+    }
+
+    void authorizeAndLoad();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (authenticating) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-6 text-slate-900">
+        <p className="text-lg font-semibold">Verifying admin access...</p>
+      </main>
+    );
+  }
+
+  // verifyAdmin() navigates to /admin/login for unauthorized visitors.
+  if (!isAuthorized) {
+    return null;
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-100 text-slate-900">
+      <header className="border-b bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <Link href="/" className="text-2xl font-bold text-blue-700">
+              UstaadHub
+            </Link>
+            <p className="text-sm text-slate-500">Learning Requirements</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+            >
+              Logout
+            </button>
+
+            <Link
+              href="/"
+              className="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+            >
+              View Website
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* DASHBOARD */}
+      <section className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mb-8">
+          <p className="font-semibold text-blue-600">
+            ADMIN PANEL
+          </p>
+
+          <h1 className="mt-1 text-3xl font-bold md:text-4xl">
+            Learning Requirements
+          </h1>
+
+          <p className="mt-2 text-slate-600">
+            Manage student and parent teacher requests.
+          </p>
+        </div>
+
+        {/* ERROR */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p className="font-semibold">
+              Could not load requirements
+            </p>
+
+            <p className="mt-1">{error}</p>
+
+            <button
+              onClick={loadRequirements}
+              className="mt-3 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* STATS */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Total Requirements
+            </p>
+
+            <p className="mt-2 text-3xl font-bold">
+              {requirements.length}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-500">
+              New
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-blue-600">
+              {countByStatus("pending")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Contacted
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-orange-600">
+              {countByStatus("contacted")}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Matched
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-green-600">
+              {countByStatus("matched")}
+            </p>
+          </div>
+        </div>
+
+        {/* FILTER */}
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold">
+              Student Requirements
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {filteredRequirements.length} requirement
+              {filteredRequirements.length !== 1 ? "s" : ""} shown
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {statuses.map((item) => (
+              <button
+                key={item}
+                onClick={() => setFilter(item)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                  filter === item
+                    ? "bg-blue-600 text-white"
+                    : "border bg-white hover:bg-slate-50"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* REQUIREMENTS */}
+        <div className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-sm">
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="text-lg font-semibold">
+                Loading requirements...
+              </div>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Fetching data from Supabase.
+              </p>
+            </div>
+          ) : filteredRequirements.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="text-4xl">📋</div>
+
+              <h3 className="mt-4 text-xl font-bold">
+                No requirements found
+              </h3>
+
+              <p className="mt-2 text-slate-500">
+                There are no learning requirements for this filter.
+              </p>
+            </div>
+          ) : (
+            <div>
+            {/* Mobile / small-screen cards */}
+            <div className="md:hidden space-y-4">
+              {filteredRequirements.map((item) => {
+                const status = getStatus(item);
+
+                return (
+                  <div
+                    key={item.id}
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-900">
+                          {item.parent_student_name || "Not provided"}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {item.student_age
+                            ? `Age ${item.student_age}`
+                            : "Age not provided"}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                          status === "pending"
+                            ? "bg-blue-100 text-blue-700"
+                            : status === "contacted"
+                              ? "bg-orange-100 text-orange-700"
+                              : status === "matched"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+
+                    <dl className="mt-4 space-y-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Subject
+                        </dt>
+                        <dd className="min-w-0 text-right text-sm font-medium text-slate-900 break-words">
+                          {item.subjects?.length
+                            ? item.subjects.join(", ")
+                            : "Not specified"}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Level
+                        </dt>
+                        <dd className="text-sm text-slate-900">
+                          {item.current_level || "-"}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Mode
+                        </dt>
+                        <dd className="text-sm text-slate-900">
+                          {item.class_mode || "-"}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Timing
+                        </dt>
+                        <dd className="min-w-0 text-right text-sm text-slate-900 break-words">
+                          <p>{item.preferred_time || "-"}</p>
+                          {item.preferred_days && (
+                            <p className="text-xs text-slate-500">
+                              {item.preferred_days}
+                            </p>
+                          )}
+                        </dd>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-sm font-semibold text-slate-500">
+                          Budget
+                        </dt>
+                        <dd className="text-sm text-slate-900">
+                          {formatBudget(item.monthly_budget)}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRequirement(item)}
+                      className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                    >
+                      View
+                    </button>
+                    {item.deleted_at === null ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeactivateRequirement(item)}
+                        disabled={requirementActionId === item.id}
+                        className="mt-2 w-full rounded-lg border border-orange-500 bg-white px-4 py-2.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {requirementActionId === item.id ? "Deactivating..." : "Deactivate"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleRestoreRequirement(item)}
+                        disabled={requirementActionId === item.id}
+                        className="mt-2 w-full rounded-lg border border-emerald-500 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {requirementActionId === item.id ? "Restoring..." : "Restore"}
+                      </button>
+                    )}
+                    {requirementActionId === item.id && requirementActionError && (
+                      <p className="mt-2 text-xs text-red-600">{requirementActionError}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[1300px] text-left">
+                <thead className="border-b bg-slate-50 text-sm">
+                  <tr>
+                    <th className="px-5 py-4">Student</th>
+                    <th className="px-5 py-4">Subject</th>
+                    <th className="px-5 py-4">Level</th>
+                    <th className="px-5 py-4">Mode</th>
+                    <th className="px-5 py-4">Timing</th>
+                    <th className="px-5 py-4">Budget</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4">State</th>
+                    <th className="px-5 py-4">Action</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y">
+                  {filteredRequirements.map((item) => {
+                    const status = getStatus(item);
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-5">
+                          <p className="font-semibold">
+                            {item.parent_student_name ||
+                              "Not provided"}
+                          </p>
+
+                          <p className="text-sm text-slate-500">
+                            {item.student_age
+                              ? `Age ${item.student_age}`
+                              : "Age not provided"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <div className="max-w-[220px]">
+                            {item.subjects?.length
+                              ? item.subjects.join(", ")
+                              : "Not specified"}
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          {item.current_level || "-"}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          {item.class_mode || "-"}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p>
+                            {item.preferred_time || "-"}
+                          </p>
+
+                          {item.preferred_days && (
+                            <p className="text-xs text-slate-500">
+                              {item.preferred_days}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          {formatBudget(item.monthly_budget)}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              status === "pending"
+                                ? "bg-blue-100 text-blue-700"
+                                : status === "contacted"
+                                ? "bg-orange-100 text-orange-700"
+                                : status === "matched"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              item.deleted_at === null
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {item.deleted_at === null ? "Active" : "Deactivated"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5">
+                          {item.deleted_at === null ? (
+                            <button
+                              onClick={() => void handleDeactivateRequirement(item)}
+                              disabled={requirementActionId === item.id}
+                              className="rounded-lg border border-orange-500 bg-white px-3 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {requirementActionId === item.id ? "Deactivating..." : "Deactivate"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void handleRestoreRequirement(item)}
+                              disabled={requirementActionId === item.id}
+                              className="rounded-lg border border-emerald-500 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {requirementActionId === item.id ? "Restoring..." : "Restore"}
+                            </button>
+                          )}
+                          {requirementActionId === item.id && requirementActionError && (
+                            <p className="mt-1 text-xs text-red-600">{requirementActionError}</p>
+                          )}
+                        </td>
+                        <td className="px-5 py-5">
+                          <button
+                            onClick={() =>
+                              setSelectedRequirement(item)
+                            }
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            </div>
+          )}
+        </div>
+      </section>
+      {/* DETAIL MODAL */}
+      {selectedRequirement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-5">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-7 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-semibold text-blue-600">
+                  LEARNING REQUIREMENT
+                </p>
+
+                <h2 className="mt-1 text-2xl font-bold">
+                  {selectedRequirement.parent_student_name ||
+                    "Student"}
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Submitted{" "}
+                  {formatDate(selectedRequirement.created_at)}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelectedRequirement(null)}
+                className="rounded-full bg-slate-100 px-3 py-2 font-bold hover:bg-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-7 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Student Name
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.parent_student_name ||
+                    "Not provided"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Phone
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.mobile_number ||
+                    "Not provided"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Age
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.student_age || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Student Gender
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.student_gender || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Subjects
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.subjects?.join(", ") ||
+                    "Not specified"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Current Level
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.current_level || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Class Mode
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.class_mode || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Teacher Preference
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.teacher_gender || "Any"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Preferred Languages
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.preferred_languages?.join(
+                    ", "
+                  ) || "Not specified"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Classes Per Week
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.classes_per_week || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Preferred Time
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.preferred_time || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Preferred Days
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.preferred_days || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Monthly Budget
+                </p>
+                <p className="mt-1 font-semibold">
+                  {formatBudget(
+                    selectedRequirement.monthly_budget
+                  )}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  City / Location
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.city_location ||
+                    "Not provided"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Last Updated
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.updated_at
+                    ? formatDate(selectedRequirement.updated_at)
+                    : "-"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-5">
+              <label className="text-sm font-semibold text-slate-700">
+                Requirement Status
+              </label>
+
+              <select
+                value={selectedRequirement.status}
+                disabled={statusUpdating}
+                onChange={(event) =>
+                  void updateStatus(
+                    selectedRequirement,
+                    event.target.value as RequirementStatus
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+              >
+                <option value="pending">pending</option>
+                <option value="contacted">contacted</option>
+                <option value="matched">matched</option>
+                <option value="closed">closed</option>
+              </select>
+            </div>
+
+            {selectedRequirement.deleted_at !== null && (
+              <div className="mt-4 rounded-xl border border-slate-300 bg-slate-100 p-3 text-sm font-semibold text-slate-600">
+                This requirement is currently deactivated.
+              </div>
+            )}
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => setSelectedRequirement(null)}
+                className="flex-1 rounded-xl border py-3 font-semibold hover:bg-slate-50"
+              >
+                Close
+              </button>
+              {selectedRequirement.deleted_at === null ? (
+                <button
+                  onClick={() => void handleDeactivateRequirement(selectedRequirement)}
+                  disabled={requirementActionId === selectedRequirement.id}
+                  className="flex-1 rounded-xl border border-orange-500 bg-white py-3 font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {requirementActionId === selectedRequirement.id ? "Deactivating..." : "Deactivate"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => void handleRestoreRequirement(selectedRequirement)}
+                  disabled={requirementActionId === selectedRequirement.id}
+                  className="flex-1 rounded-xl border border-emerald-500 bg-white py-3 font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {requirementActionId === selectedRequirement.id ? "Restoring..." : "Restore"}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowTeacherMatcher(true);
+                  void loadVerifiedTeachers();
+                }}
+                className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Match Teachers
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showTeacherMatcher && selectedRequirement && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+      <div className="flex items-center justify-between border-b px-6 py-5">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            Connect a Teacher
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Choose any verified teacher for this requirement.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowTeacherMatcher(false)}
+          className="rounded-lg px-3 py-2 text-xl text-slate-500 hover:bg-slate-100"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="max-h-[65vh] overflow-y-auto p-6">
+
+        {teacherLoading ? (
+          <div className="py-10 text-center text-slate-500">
+            Loading verified teachers...
+          </div>
+        ) : teachers.length === 0 ? (
+          <div className="rounded-xl bg-slate-50 p-6 text-center">
+            <p className="font-semibold text-slate-700">
+              No verified teachers found.
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Verify a teacher first from Teacher Verification.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {teachers.map((teacher) => (
+              <div
+                key={teacher.id}
+                className="rounded-xl border border-slate-200 p-4 transition hover:border-blue-300 hover:bg-blue-50/40"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900">
+                      {teacher.full_name || "Teacher"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {teacher.qualification || "Qualification not specified"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-600">
+                      {teacher.subjects?.length
+                        ? teacher.subjects.join(", ")
+                        : "Subjects not specified"}
+                    </p>
+
+                    {teacher.city_location && (
+                      <p className="mt-1 text-sm text-slate-500">
+                        {teacher.city_location}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={connectingTeacherId === teacher.id}
+                    onClick={() =>
+                      void connectTeacherToRequirement(
+                        selectedRequirement,
+                        teacher
+                      )
+                    }
+                    className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {connectingTeacherId === teacher.id
+                      ? "Connecting..."
+                      : "Connect Teacher"}
+                  </button>
+
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
+
+      <div className="border-t bg-slate-50 px-6 py-4">
+        <button
+          type="button"
+          onClick={() => setShowTeacherMatcher(false)}
+          className="rounded-xl border bg-white px-5 py-2.5 font-semibold hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+    </main>
+  );
+}
