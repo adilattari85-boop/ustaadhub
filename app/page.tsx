@@ -21,6 +21,7 @@ import {
 import SupportSection from "@/components/SupportSection";
 import FeaturedTeachersCarousel from "@/components/FeaturedTeachersCarousel";
 import JobsTickerSection from "@/components/JobsTickerSection";
+import UdyamBadge from "@/components/UdyamBadge";
 
 // Structured data (JSON-LD) for the homepage — describes genuine UstaadHub
 // organization/website info only. No invented ratings, reviews or offers.
@@ -239,6 +240,10 @@ const copy = {
     footerBecomeTeacher: "Become a Teacher",
     footerPrivacyPolicy: "Privacy Policy",
     footerTermsConditions: "Terms & Conditions",
+    // Udyam (MSME) trust badge — wording limited to what the registration
+    // certificate states. Never "Government Approved/Certified".
+    footerUdyamTitle: "MSME • Udyam Registered",
+    footerUdyamMeta: "Micro enterprise • Services",
     support: {
       eyebrow: "SUPPORT USTAADHUB",
       title: "Support UstaadHub",
@@ -457,6 +462,8 @@ const copy = {
     footerBecomeTeacher:"استاد بنیں",
     footerPrivacyPolicy:"رازداری کی پالیسی",
     footerTermsConditions:"شرائط و شرایط",
+    footerUdyamTitle:"ایم ایس ایم ای • اُدیم رجسٹرڈ",
+    footerUdyamMeta:"مائیکرو ادارہ • خدمات",
   },
 };
 
@@ -1689,6 +1696,15 @@ function selectCourse(course: string) {
               <p className="mt-3 max-w-xs text-sm leading-7 text-slate-500">
                 {t.footerDescription}
               </p>
+
+              {/* Udyam (MSME) registration trust badge. Text/icon styling only —
+                  no official MSME/Udyam logo asset exists in the project yet, and
+                  none may be invented. See components/UdyamBadge.tsx. */}
+              <UdyamBadge
+                title={t.footerUdyamTitle}
+                meta={t.footerUdyamMeta}
+                className="mt-5 sm:max-w-sm"
+              />
             </div>
 
             <div>

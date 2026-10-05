@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { WHATSAPP_URL } from "@/lib/contact";
+import UdyamBadge from "@/components/UdyamBadge";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
@@ -230,16 +231,21 @@ export default function TermsPage() {
       </article>
 
       <footer className="border-t bg-white">
-        <div className="mx-auto flex max-w-3xl flex-wrap gap-x-6 gap-y-2 px-5 py-8 text-sm text-slate-500">
-          <Link href="/" className="hover:text-blue-700">
-            Home
-          </Link>
-          <Link href="/privacy" className="hover:text-blue-700">
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className="hover:text-blue-700">
-            Terms &amp; Conditions
-          </Link>
+        <div className="mx-auto max-w-3xl px-5 py-8">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+            <Link href="/" className="hover:text-blue-700">
+              Home
+            </Link>
+            <Link href="/privacy" className="hover:text-blue-700">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-blue-700">
+              Terms &amp; Conditions
+            </Link>
+          </div>
+
+          {/* Udyam (MSME) registration trust badge — see components/UdyamBadge.tsx. */}
+          <UdyamBadge className="mt-6" />
         </div>
       </footer>
     </main>

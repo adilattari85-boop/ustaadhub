@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import JobContactUnlock from "@/components/JobContactUnlock";
 import JobShareButtons from "@/components/JobShareButtons";
 import JobsSiteHeader from "@/components/JobsSiteHeader";
+import UdyamBadge from "@/components/UdyamBadge";
 import { supabase } from "@/lib/supabase";
 import { readJobContactPaymentSettings } from "@/lib/payments/server";
 import { DEFAULT_JOB_CONTACT_PAYMENT_SETTINGS } from "@/lib/payments/types";
@@ -549,6 +550,9 @@ export default async function JobDetailsPage({
           <Link href="/jobs" className="transition hover:text-blue-700">
             ← Back to all jobs
           </Link>
+
+          {/* Udyam (MSME) registration trust badge — see components/UdyamBadge.tsx. */}
+          <UdyamBadge className="mt-5" />
         </div>
       </footer>
     </div>

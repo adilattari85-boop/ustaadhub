@@ -9,6 +9,7 @@ import {
   parseFeeInput,
   validateTeacherForm,
 } from "@/lib/teacherForm";
+import UdyamBadge from "@/components/UdyamBadge";
 
 // The teacher option lists and validation rules live in lib/teacherForm.ts so the
 // completion flow (app/teacher/complete-profile) cannot drift from this form.
@@ -935,6 +936,11 @@ export default function RegisterTeacher() {
 
         <div className="mx-auto max-w-7xl px-6 py-8 text-center text-sm text-slate-500">
           © 2026 UstaadHub. All rights reserved.
+
+          {/* Udyam (MSME) registration trust badge — see components/UdyamBadge.tsx. */}
+          <div className="mt-6 flex justify-center">
+            <UdyamBadge />
+          </div>
         </div>
 
       </footer>

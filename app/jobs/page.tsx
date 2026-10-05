@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import JobsExplorer from "@/components/JobsExplorer";
 import JobsSiteHeader from "@/components/JobsSiteHeader";
+import UdyamBadge from "@/components/UdyamBadge";
 import { supabase } from "@/lib/supabase";
 import { fetchPublishedJobs, type Job } from "@/lib/jobs";
 
@@ -102,6 +103,9 @@ export default function JobsPage() {
           Jobs and opportunities on UstaadHub are posted by masjids, madrasas and
           Islamic institutes. Always verify the organisation before sharing
           personal details.
+
+          {/* Udyam (MSME) registration trust badge — see components/UdyamBadge.tsx. */}
+          <UdyamBadge className="mt-5" />
         </div>
       </footer>
     </div>

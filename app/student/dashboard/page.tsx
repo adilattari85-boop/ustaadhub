@@ -21,6 +21,7 @@ import {
   FaSearch,
   FaBell,
 } from "react-icons/fa";
+import UdyamBadge from "@/components/UdyamBadge";
 
 // Navigation items for sidebar. Only "Home" has an existing route ("/student/dashboard").
 // All others are disabled (no real routes in the project).
@@ -821,6 +822,11 @@ export default function StudentDashboard() {
               <span className="cursor-default">Terms</span>
               <span className="cursor-default">Privacy</span>
               <span className="cursor-default">Support</span>
+            </div>
+
+            {/* Udyam (MSME) registration trust badge — see components/UdyamBadge.tsx. */}
+            <div className="mt-5 flex justify-center">
+              <UdyamBadge />
             </div>
           </footer>
         </main>

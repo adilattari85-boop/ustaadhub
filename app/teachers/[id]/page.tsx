@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import UdyamBadge from "@/components/UdyamBadge";
 
 const baseUrl = "https://www.ustaadhub.in";
 
@@ -322,6 +323,11 @@ export default async function TeacherProfilePage({
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-6 py-8 text-center text-sm text-slate-500">
           © 2026 UstaadHub. All rights reserved.
+
+          {/* Udyam (MSME) registration trust badge — see components/UdyamBadge.tsx. */}
+          <div className="mt-6 flex justify-center">
+            <UdyamBadge />
+          </div>
         </div>
       </footer>
     </main>
