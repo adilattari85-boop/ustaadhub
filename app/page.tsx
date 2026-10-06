@@ -1688,12 +1688,12 @@ function selectCourse(course: string) {
 
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-white">
-        <div className="landing-container py-10 sm:py-12">
-          <div className="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-6">
+        <div className="landing-container py-8 sm:py-10">
+          <div className="grid gap-8 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-7 lg:grid-cols-6 lg:gap-x-6 lg:gap-y-6">
             <div className="sm:col-span-2 lg:col-span-2">
               <p className="text-xl font-bold text-blue-700">UstaadHub</p>
 
-              <p className="mt-3 max-w-xs text-sm leading-7 text-slate-500">
+              <p className="mt-2.5 max-w-xs text-sm leading-6 text-slate-500">
                 {t.footerDescription}
               </p>
 
@@ -1703,7 +1703,7 @@ function selectCourse(course: string) {
               <UdyamBadge
                 title={t.footerUdyamTitle}
                 meta={t.footerUdyamMeta}
-                className="mt-5 sm:max-w-sm"
+                className="mt-4"
               />
             </div>
 
@@ -1712,7 +1712,7 @@ function selectCourse(course: string) {
                 {t.footerExplore}
               </h3>
 
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
+              <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li>
                   <Link href="/teachers" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerFindTeachers}
@@ -1747,7 +1747,7 @@ function selectCourse(course: string) {
                 {t.footerCompany}
               </h3>
 
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
+              <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li>
                   <a href="#about" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerAbout}
@@ -1773,7 +1773,7 @@ function selectCourse(course: string) {
                 {t.footerForTeachers}
               </h3>
 
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
+              <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li>
                   <Link href="/register" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerBecomeTeacher}
@@ -1787,7 +1787,7 @@ function selectCourse(course: string) {
                 {t.footerLegal}
               </h3>
 
-              <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
+              <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li>
                   <Link href="/privacy" className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {t.footerPrivacyPolicy}
@@ -1803,16 +1803,17 @@ function selectCourse(course: string) {
             </div>
           </div>
 
-          <div className="mt-8 border-t border-slate-200 pt-6 sm:mt-10">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-900">
+          <div className="mt-7 flex flex-col gap-4 border-t border-slate-200 pt-6 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:pt-7">
+            <h3 className="shrink-0 text-sm font-semibold uppercase tracking-wide text-slate-900">
               {t.footerFollow}
             </h3>
 
-            {/* Real, existing UstaadHub channels only — WhatsApp, YouTube,
-                Facebook and Instagram. No placeholder links are added here. */}
-            <ul className="mt-4 flex flex-wrap items-center gap-3">
-              <li>
-                <a
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+              {/* Real, existing UstaadHub channels only — WhatsApp, YouTube,
+                  Facebook and Instagram. No placeholder links are added here. */}
+              <ul className="flex flex-wrap items-center gap-3">
+                <li>
+                  <a
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1820,12 +1821,12 @@ function selectCourse(course: string) {
                   title={t.contactWhatsApp}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-green-600 hover:bg-green-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  <FaWhatsapp aria-hidden="true" className="h-5 w-5" />
-                </a>
-              </li>
+                    <FaWhatsapp aria-hidden="true" className="h-5 w-5" />
+                  </a>
+                </li>
 
-              <li>
-                <a
+                <li>
+                  <a
                   href={YOUTUBE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1833,12 +1834,12 @@ function selectCourse(course: string) {
                   title={t.footerSocialYoutube}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-red-600 hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  <FaYoutube aria-hidden="true" className="h-5 w-5" />
-                </a>
-              </li>
+                    <FaYoutube aria-hidden="true" className="h-5 w-5" />
+                  </a>
+                </li>
 
-              <li>
-                <a
+                <li>
+                  <a
                   href={FACEBOOK_URL}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1846,12 +1847,12 @@ function selectCourse(course: string) {
                   title={t.footerSocialFacebook}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-blue-600 hover:bg-blue-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  <FaFacebookF aria-hidden="true" className="h-5 w-5" />
-                </a>
-              </li>
+                    <FaFacebookF aria-hidden="true" className="h-5 w-5" />
+                  </a>
+                </li>
 
-              <li>
-                <a
+                <li>
+                  <a
                   href={INSTAGRAM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1859,24 +1860,25 @@ function selectCourse(course: string) {
                   title={t.footerSocialInstagram}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-pink-600 hover:bg-pink-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  <FaInstagram aria-hidden="true" className="h-5 w-5" />
-                </a>
-              </li>
-            </ul>
+                    <FaInstagram aria-hidden="true" className="h-5 w-5" />
+                  </a>
+                </li>
+              </ul>
 
-            <p className="mt-4 text-sm text-slate-500">
-              <a
-                href="#contact"
-                className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-              >
-                {t.footerContact}
-              </a>
+                <p className="text-sm text-slate-500">
+                  <a
+                    href="#contact"
+                    className="transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  >
+                    {t.footerContact}
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-6 border-t border-slate-200 pt-5 text-sm text-slate-500">
+              {t.rightsReserved}
             </p>
-          </div>
-
-          <p className="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-500">
-            {t.rightsReserved}
-          </p>
         </div>
       </footer>
 
