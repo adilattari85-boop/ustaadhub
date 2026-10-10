@@ -39,7 +39,7 @@ export default function TeacherRequirementPage() {
         const { data, error: requirementError } = await supabase
           .from("learning_requirements")
           .select(
-            "id, parent_student_name, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, additional_requirement, status, created_at"
+            "id, parent_student_name, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, class_duration_minutes, preferred_start_times, additional_requirement, status, created_at"
           )
           .eq("id", requirementId)
           .maybeSingle();
