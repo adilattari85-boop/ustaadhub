@@ -21,6 +21,8 @@ type StudentRequirement = {
   class_mode: string | null;
   preferred_time: string | null;
   preferred_days: string | null;
+  class_duration_minutes: number | null;
+  preferred_start_times: string[] | null;
   status: string | null;
 };
 
@@ -98,7 +100,7 @@ export default function MyStudentsPage() {
         const { data: requirements, error: requirementError } = await supabase
           .from("learning_requirements")
           .select(
-            "id, parent_student_name, subjects, current_level, class_mode, preferred_time, preferred_days, status",
+            "id, parent_student_name, subjects, current_level, class_mode, preferred_time, preferred_days, class_duration_minutes, preferred_start_times, status",
           )
           .in("id", requirementIds);
 
@@ -260,11 +262,21 @@ export default function MyStudentsPage() {
 
                           <td className="px-5 py-5">
                             <p>{student.preferred_time || "-"}</p>
+                            {student.class_duration_minutes ? (
+                              <p className="text-xs text-slate-500">
+                                {student.class_duration_minutes} min
+                              </p>
+                            ) : null}
                             {student.preferred_days && (
                               <p className="text-xs text-slate-500 break-words">
                                 {student.preferred_days}
                               </p>
                             )}
+                            {student.preferred_start_times?.length ? (
+                              <p className="text-xs text-slate-500 break-words">
+                                {student.preferred_start_times.join(", ")}
+                              </p>
+                            ) : null}
                           </td>
 
                           <td className="px-5 py-5">
@@ -336,6 +348,18 @@ export default function MyStudentsPage() {
                           value={student.preferred_time || "-"}
                           extra={student.preferred_days}
                         />
+                        {student.class_duration_minutes ? (
+                          <Detail
+                            label="Duration"
+                            value={`${student.class_duration_minutes} min`}
+                          />
+                        ) : null}
+                        {student.preferred_start_times?.length ? (
+                          <Detail
+                            label="Start Times"
+                            value={student.preferred_start_times.join(", ")}
+                          />
+                        ) : null}
                       </dl>
 
                       <div className="mt-4">

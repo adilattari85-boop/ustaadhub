@@ -21,6 +21,8 @@ type Requirement = {
   classes_per_week: string | null;
   preferred_time: string | null;
   preferred_days: string | null;
+  class_duration_minutes: number | null;
+  preferred_start_times: string[] | null;
   monthly_budget: number | null;
   city_location: string | null;
   additional_requirement: string | null;
@@ -50,7 +52,7 @@ const statuses: Array<"All" | RequirementStatus> = [
 ];
 
 const requirementColumns =
-  "id, user_id, parent_student_name, mobile_number, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, monthly_budget, city_location, additional_requirement, created_at, updated_at, status, deleted_at";
+  "id, user_id, parent_student_name, mobile_number, student_age, student_gender, subjects, current_level, class_mode, teacher_gender, preferred_languages, classes_per_week, preferred_time, preferred_days, class_duration_minutes, preferred_start_times, monthly_budget, city_location, additional_requirement, created_at, updated_at, status, deleted_at";
 
 export default function AdminRequirementsPage() {
   const router = useRouter();
@@ -594,11 +596,21 @@ async function connectTeacherToRequirement(
                         </dt>
                         <dd className="min-w-0 text-right text-sm text-slate-900 break-words">
                           <p>{item.preferred_time || "-"}</p>
+                          {item.class_duration_minutes ? (
+                            <p className="text-xs text-slate-500">
+                              {item.class_duration_minutes} min
+                            </p>
+                          ) : null}
                           {item.preferred_days && (
                             <p className="text-xs text-slate-500">
                               {item.preferred_days}
                             </p>
                           )}
+                          {item.preferred_start_times?.length ? (
+                            <p className="text-xs text-slate-500">
+                              {item.preferred_start_times.join(", ")}
+                            </p>
+                          ) : null}
                         </dd>
                       </div>
 
@@ -705,11 +717,23 @@ async function connectTeacherToRequirement(
                             {item.preferred_time || "-"}
                           </p>
 
+                          {item.class_duration_minutes ? (
+                            <p className="text-xs text-slate-500">
+                              {item.class_duration_minutes} min
+                            </p>
+                          ) : null}
+
                           {item.preferred_days && (
                             <p className="text-xs text-slate-500">
                               {item.preferred_days}
                             </p>
                           )}
+
+                          {item.preferred_start_times?.length ? (
+                            <p className="text-xs text-slate-500">
+                              {item.preferred_start_times.join(", ")}
+                            </p>
+                          ) : null}
                         </td>
 
                         <td className="px-5 py-5">
@@ -916,6 +940,28 @@ async function connectTeacherToRequirement(
                 </p>
                 <p className="mt-1 font-semibold">
                   {selectedRequirement.preferred_time || "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Class Duration
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.class_duration_minutes
+                    ? `${selectedRequirement.class_duration_minutes} minutes`
+                    : "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-500">
+                  Preferred Start Times
+                </p>
+                <p className="mt-1 font-semibold">
+                  {selectedRequirement.preferred_start_times?.length
+                    ? selectedRequirement.preferred_start_times.join(", ")
+                    : "-"}
                 </p>
               </div>
 
