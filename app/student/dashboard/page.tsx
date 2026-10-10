@@ -443,6 +443,14 @@ export default function StudentDashboard() {
     }
   }
 
+  /** Format a stored UTC timestamptz for display in Asia/Kolkata. */
+  function formatScheduledKolkata(dateStr: string | null): string {
+    if (!dateStr) return "Not scheduled";
+    const local = new Date(dateStr);
+    if (Number.isNaN(local.getTime())) return dateStr ?? "Not scheduled";
+    return local.toLocaleString([], { timeZone: "Asia/Kolkata" });
+  }
+
   const initials = getInitials(email);
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -735,7 +743,7 @@ export default function StudentDashboard() {
                         <td className="px-4 py-3 text-slate-600">{session.title}</td>
                         <td className="px-4 py-3 text-slate-600">
                           {session.scheduled_at
-                            ? new Date(session.scheduled_at).toLocaleString()
+                            ? formatScheduledKolkata(session.scheduled_at)
                             : "Not scheduled"}
                         </td>
                       </tr>
@@ -776,7 +784,7 @@ export default function StudentDashboard() {
                         </h3>
                         <p className="mt-1 text-sm text-slate-600">
                           {session.scheduled_at
-                            ? new Date(session.scheduled_at).toLocaleString()
+                            ? formatScheduledKolkata(session.scheduled_at)
                             : "Not scheduled"}{" "}
                           · {session.duration_minutes} min
                         </p>

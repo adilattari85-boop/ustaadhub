@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { toIsoTimestamp, toLocalDatetimeLocal } from "@/lib/datetime";
 
 type Match = {
   id: string;
@@ -426,7 +427,19 @@ type ClassSession = {
   join_link: string;
   scheduled_at: string | null;
   created_at: string;
-};
+}
+
+// supabase-js reports a fetch that failed before any HTTP response arrived
+// (offline, DNS/TLS drop, proxy/extension blocking) as an error whose message
+// contains "Failed to fetch" and whose code is empty. Real PostgREST errors
+// always come from the server with an HTTP status and never look like this.
+// Only error metadata is inspected — never tokens or payloads.
+function isNetworkFetchError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const { message, code } = err as { message?: unknown; code?: unknown };
+  if (typeof code === "string" && code) return false;
+  return typeof message === "string" && message.includes("Failed to fetch");
+}
 
 function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, isAccepted }: {
   open: boolean;
@@ -440,6 +453,7 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [scheduledAtError, setScheduledAtError] = useState("");
   const [title, setTitle] = useState("");
   const [joinLink, setJoinLink] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -473,6 +487,7 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
     setTitle("");
     setJoinLink("");
     setScheduledAt("");
+    setScheduledAtError("");
     setEditingId(null);
   }
 
@@ -480,7 +495,10 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
     setEditingId(session.id);
     setTitle(session.title);
     setJoinLink(session.join_link);
-    setScheduledAt(session.scheduled_at ? session.scheduled_at.slice(0, 16) : "");
+    setScheduledAtError("");
+    // Legacy sessions may have scheduled_at = null; date/time is now required,
+    // so clear the field instead of keeping the previous form value.
+    setScheduledAt(toLocalDatetimeLocal(session.scheduled_at) ?? "");
   }
 
   function isValidUrl(url: string): boolean {
@@ -496,6 +514,12 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
   // plain object (not an Error), so instanceof Error alone would discard the
   // real message/code/details/hint. This never includes credentials.
   function describeError(err: unknown): string {
+    // The request never got an HTTP response, so server codes/hints/stacks
+    // are meaningless here — show actionable guidance instead of the raw
+    // "TypeError: Failed to fetch" plus its JavaScript stack.
+    if (isNetworkFetchError(err)) {
+      return "Network error: the request never reached the server, so nothing was changed. Check your connection and try again. If it keeps failing, open DevTools → Network and inspect the failed request (e.g. net::ERR_*, blocked, or canceled) — a proxy, VPN, or browser extension may be interfering.";
+    }
     if (typeof err === "object" && err !== null) {
       const errObj = err as {
         message?: unknown;
@@ -530,25 +554,69 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
     e.preventDefault();
     setError("");
     setSuccess("");
-    if (!title.trim()) { setError("Class title is required."); return; }
-    if (!isValidUrl(joinLink)) { setError("Please enter a valid http/https meeting URL."); return; }
+    setScheduledAtError("");
+
+    if (!title.trim()) {
+      setError("Class title is required.");
+      return;
+    }
+    if (!isValidUrl(joinLink)) {
+      setError("Please enter a valid http/https meeting URL.");
+      return;
+    }
+    if (!scheduledAt.trim()) {
+      setScheduledAtError("Please select a date and time in Asia/Kolkata.");
+      return;
+    }
+
+    const iso = toIsoTimestamp(scheduledAt);
+    if (!iso) {
+      setScheduledAtError("The selected date/time is invalid. Please choose a valid date and time.");
+      return;
+    }
+
     setLoading(true);
     try {
       if (editingId) {
-        const { error: updateError } = await supabase
+        const payload = { title: title.trim(), join_link: joinLink.trim(), scheduled_at: iso };
+        // supabase-js only auto-retries GET/HEAD/OPTIONS, so a single dropped
+        // connection surfaces this PATCH as "TypeError: Failed to fetch"
+        // before any response is received. The payload targets one row by id
+        // and is idempotent, so one delayed retry is safe.
+        let updateResult = await supabase
           .from("class_sessions")
-          .update({ title: title.trim(), join_link: joinLink.trim(), scheduled_at: scheduledAt || null })
-          .eq("id", editingId);
+          .update(payload)
+          .eq("id", editingId)
+          .select("id");
+        if (updateResult.error && isNetworkFetchError(updateResult.error)) {
+          console.warn("Class session update: network error before any response, retrying once.", updateResult.error);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          updateResult = await supabase
+            .from("class_sessions")
+            .update(payload)
+            .eq("id", editingId)
+            .select("id");
+        }
+        const { data: updatedRows, error: updateError } = updateResult;
         if (updateError) throw updateError;
+        // PostgREST reports no error when zero rows are affected (e.g. the row
+        // was removed or is no longer visible to this account), which previously
+        // showed a false "updated" success. Treat an empty result as a failure.
+        if (!updatedRows || updatedRows.length === 0) {
+          setError("No class session was updated. It may have been removed, or your account may no longer have access to it. The list has been refreshed.");
+          await fetchSessions();
+          return;
+        }
         setSuccess("Class session updated.");
       } else {
         const { error: insertError } = await supabase
           .from("class_sessions")
-          .insert({ match_id: matchId, requirement_id: requirementId, teacher_id: teacherId, title: title.trim(), join_link: joinLink.trim(), scheduled_at: scheduledAt || null });
+          .insert({ match_id: matchId, requirement_id: requirementId, teacher_id: teacherId, title: title.trim(), join_link: joinLink.trim(), scheduled_at: iso });
         if (insertError) throw insertError;
         setSuccess("Class session created.");
       }
       resetForm();
+      setScheduledAtError("");
       await fetchSessions();
     } catch (err) {
       console.error("Class session save error:", err);
@@ -563,12 +631,25 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
     setLoading(true);
     setError("");
     try {
-      const { error: deleteError } = await supabase.from("class_sessions").delete().eq("id", sessionId);
+      const { data: deletedRows, error: deleteError } = await supabase
+        .from("class_sessions")
+        .delete()
+        .eq("id", sessionId)
+        .select("id");
       if (deleteError) throw deleteError;
+      // Same zero-row guard as update: an empty result means nothing was
+      // deleted, so never report a false success.
+      if (!deletedRows || deletedRows.length === 0) {
+        setError("No class session was deleted. It may have already been removed, or your account may no longer have access to it. The list has been refreshed.");
+        await fetchSessions();
+        return;
+      }
       setSuccess("Class session deleted.");
       await fetchSessions();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete.");
+      // PostgrestError is a plain object (not an Error) in supabase-js v2, so
+      // describeError surfaces its code/message/hint instead of swallowing it.
+      setError(describeError(err));
     } finally {
       setLoading(false);
     }
@@ -576,7 +657,9 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
 
   function formatScheduled(dateStr: string | null): string {
     if (!dateStr) return "Not scheduled";
-    return new Date(dateStr).toLocaleString();
+    const local = new Date(dateStr);
+    if (Number.isNaN(local.getTime())) return dateStr ?? "Not scheduled";
+    return local.toLocaleString([], { timeZone: "Asia/Kolkata" });
   }
 
   return (
@@ -602,8 +685,18 @@ function ClassSessionModal({ open, onClose, requirementId, matchId, teacherId, i
                 <input type="url" value={joinLink} onChange={(e) => setJoinLink(e.target.value)} placeholder="https://meet.google.com/... or https://zoom.us/j/..." className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Scheduled Date/Time (optional)</label>
-                <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                <label className="block text-xs font-medium text-slate-600 mb-1">Scheduled Date/Time (required)</label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  required
+                  aria-required="true"
+                  title="Select a date and time in Asia/Kolkata. This field is required for class scheduling."
+                />
+                {scheduledAtError && <p className="mt-1 text-xs text-red-600">{scheduledAtError}</p>}
+                <p className="mt-1 text-xs text-slate-400">Times are shown and stored in Asia/Kolkata (UTC+05:30).</p>
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               {success && <p className="text-sm text-emerald-600">{success}</p>}
