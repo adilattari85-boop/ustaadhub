@@ -18,6 +18,8 @@ type Requirement = {
   classes_per_week: string | null;
   preferred_time: string | null;
   preferred_days: string | null;
+  class_duration_minutes: number | null;
+  preferred_start_times: string[] | null;
   additional_requirement: string | null;
   status: string | null;
   created_at: string;
@@ -96,6 +98,8 @@ export default function TeacherRequirementPage() {
                 classes_per_week,
                 preferred_time,
                 preferred_days,
+                class_duration_minutes,
+                preferred_start_times,
                 additional_requirement,
                 status,
                 created_at
@@ -361,6 +365,24 @@ export default function TeacherRequirementPage() {
                 <InfoRow
                   label="Preferred Time"
                   value={requirement.preferred_time}
+                />
+
+                <InfoRow
+                  label="Class Duration"
+                  value={
+                    requirement.class_duration_minutes
+                      ? `${requirement.class_duration_minutes} minutes`
+                      : null
+                  }
+                />
+
+                <InfoRow
+                  label="Preferred Start Times"
+                  value={
+                    requirement.preferred_start_times?.length
+                      ? requirement.preferred_start_times.join(", ")
+                      : null
+                  }
                 />
               </div>
             </div>

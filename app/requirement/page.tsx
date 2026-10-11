@@ -42,6 +42,52 @@ const subjects = [
 
 const languages = ["Hindi", "Urdu", "English", "Arabic"];
 
+// ---------------------------------------------------------------------------
+// Phase 2A: class duration & preferred start-time slots (24h "HH:MM", IST
+// fixed +05:30). Each period has a window; a start slot is only offered when
+// the full class (30 or 60 minutes) fits inside the window, so a 60-minute
+// class can never start at a slot that would run past the period end
+// (e.g. 23:30). "Flexible" spans the whole bookable day.
+const periodWindows: Record<string, { startHour: number; endHour: number }> = {
+  Morning: { startHour: 6, endHour: 12 },
+  Afternoon: { startHour: 12, endHour: 17 },
+  Evening: { startHour: 17, endHour: 21 },
+  Night: { startHour: 21, endHour: 24 },
+  Flexible: { startHour: 6, endHour: 24 },
+};
+
+function buildStartSlots(
+  startHour: number,
+  endHour: number,
+  durationMinutes: number
+): string[] {
+  const slots: string[] = [];
+
+  for (
+    let minutes = startHour * 60;
+    minutes + durationMinutes <= endHour * 60;
+    minutes += 30
+  ) {
+    const hour = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const minute = String(minutes % 60).padStart(2, "0");
+    slots.push(`${hour}:${minute}`);
+  }
+
+  return slots;
+}
+
+function getAvailableStartSlots(
+  period: string,
+  durationMinutes: number
+): string[] {
+  const periodWindow = periodWindows[period] ?? periodWindows.Flexible;
+  return buildStartSlots(
+    periodWindow.startHour,
+    periodWindow.endHour,
+    durationMinutes
+  );
+}
+
 const copy = {
   en: {
     subjectRequired: "Please select at least one subject.",
@@ -81,6 +127,12 @@ const copy = {
     preferredDaysLabel: "Preferred Class Days *",
     daysHelper: "Select the days you would prefer for your classes.",
     preferredTimeLabel: "Preferred Time",
+    classDurationLabel: "Class Duration",
+    duration30Label: "30 minutes",
+    duration60Label: "60 minutes",
+    startTimeLabel: "Preferred Start Times",
+    startTimeHelper:
+      "Optional — select one or more preferred class start times.",
     preferredDaysTextLabel: "Preferred Days",
     preferredDaysPlaceholder: "Example: Monday, Wednesday, Friday",
     budgetLabel: "Budget",
@@ -137,6 +189,12 @@ const copy = {
     preferredDaysLabel: "پسندیدہ کلاس کے دن *",
     daysHelper: "ان دنوں کا انتخاب کریں جن میں آپ کلاسیں لینا پسند کریں گے۔",
     preferredTimeLabel: "پسندیدہ وقت",
+    classDurationLabel: "کلاس کی لمبائی",
+    duration30Label: "30 منٹ",
+    duration60Label: "60 منٹ",
+    startTimeLabel: "پسندیدہ آغاز کے اوقات",
+    startTimeHelper:
+      "اختیاری — اپنی کلاس کے پسندیدہ آغاز کے اوقات منتخب کریں۔",
     preferredDaysTextLabel: "پسندیدہ دن",
     preferredDaysPlaceholder: "مثال: پیر، بدھ، جمعہ",
     budgetLabel: "بجٹ",
@@ -341,6 +399,8 @@ export default function RequirementPage() {const [isUrdu, setIsUrdu] = useState(
   const [classesPerWeek, setClassesPerWeek] = useState("1 class");
   const [preferredTime, setPreferredTime] = useState("Morning");
   const [preferredDays, setPreferredDays] = useState<string[]>([]);
+  const [classDuration, setClassDuration] = useState(60);
+  const [preferredStartTimes, setPreferredStartTimes] = useState<string[]>([]);
 
 const weekDays = [
   "Monday",
@@ -501,6 +561,33 @@ const weekDays = [
   );
 }
 
+  function toggleStartTime(slot: string) {
+    setPreferredStartTimes((current) =>
+      current.includes(slot)
+        ? current.filter((item) => item !== slot)
+        : [...current, slot]
+    );
+  }
+
+  // Changing the duration or period can invalidate already-selected start
+  // times (a slot that fit before may now run past the period window), so
+  // drop the ones that no longer fit instead of submitting inconsistent data.
+  function changeClassDuration(minutes: number) {
+    setClassDuration(minutes);
+    const allowed = getAvailableStartSlots(preferredTime, minutes);
+    setPreferredStartTimes((current) =>
+      current.filter((slot) => allowed.includes(slot))
+    );
+  }
+
+  function changePreferredTime(period: string) {
+    setPreferredTime(period);
+    const allowed = getAvailableStartSlots(period, classDuration);
+    setPreferredStartTimes((current) =>
+      current.filter((slot) => allowed.includes(slot))
+    );
+  }
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
@@ -560,12 +647,10 @@ const weekDays = [
         error: currentUserError,
       } = await supabase.auth.getUser();
 
-      let requirementUserId: string | null = null;
-
-      if (currentUser && !currentUserError) {
-        // Already logged in: reuse the existing authenticated account.
-        requirementUserId = currentUser.id;
-      } else {
+      // A brand-new visitor signs up below; an already-logged-in student falls
+      // straight through to the fail-closed ownership gate, which re-reads the
+      // live session before anything is inserted.
+      if (!currentUser || currentUserError) {
         // New visitor: create the student auth account with the
         // entered email + password.
         const { data: signUpData, error: signUpError } =
@@ -598,19 +683,61 @@ const weekDays = [
         }
 
         if (!signUpData.session || !signUpData.user) {
+          // signUp() created the Auth user but did not return a session
+          // (e.g. email confirmation is required first). Do NOT insert a
+          // requirement without a session — send the student through the
+          // existing confirmation/login flow instead so no orphan row is
+          // ever created.
           setError(
-            "Account creation could not be completed. Please try again.",
+            signUpData.user
+              ? "Your account was created but you are not signed in yet. Please confirm your email if asked, then log in to submit your requirement."
+              : "Account creation could not be completed. Please try again.",
           );
+          setLoginNeeded(true);
           return;
         }
-
-        requirementUserId = signUpData.session.user.id;
 
         // A brand new student Auth account was just created by signUp() above
         // (the already-logged-in branch above never reaches this line), so
         // trigger the student welcome email. Non-blocking.
         requestWelcomeEmail();
       }
+
+      // ---------------------------------------
+      // 1b. FAIL-CLOSED OWNERSHIP GATE
+      // ---------------------------------------
+      // The requirement owner must ALWAYS come from the live authenticated
+      // Supabase session — never from form input, URL params, localStorage or
+      // any fallback value. Re-read the session right before building the row
+      // so a missing/stale session can never produce an orphan requirement.
+      const {
+        data: { session: activeSession },
+      } = await supabase.auth.getSession();
+
+      const authenticatedUserId = activeSession?.user?.id;
+
+      if (!authenticatedUserId) {
+        setError(
+          "Please sign in or create a student account before submitting a requirement.",
+        );
+        setLoginNeeded(true);
+        return;
+      }
+
+      // Student profile validation: in the existing UstaadHub schema the
+      // student application profile IS the Supabase Auth user carrying
+      // user_metadata.role = 'student' — exactly what the
+      // learning_requirements RLS insert policy requires (there is no separate
+      // student profile table). A missing/incorrect role means the profile is
+      // missing, so we stop instead of creating an orphan requirement.
+      if (activeSession?.user?.user_metadata?.role !== "student") {
+        setError(
+          "Your student profile is missing or incomplete. Please sign out and sign in again with your student account before submitting a requirement.",
+        );
+        return;
+      }
+
+      const requirementUserId: string = authenticatedUserId;
 
       // ---------------------------------------
       // 2. PREPARE DATABASE DATA
@@ -640,6 +767,11 @@ const weekDays = [
         classes_per_week: classesPerWeek,
         preferred_time: preferredTime,
         preferred_days: preferredDays.join(", "),
+        class_duration_minutes: Number(classDuration),
+        // Optional by product decision: no start times chosen -> NULL, matching
+        // the migration's documented meaning ("NULL = none chosen").
+        preferred_start_times:
+          preferredStartTimes.length > 0 ? preferredStartTimes : null,
         
 
         monthly_budget: monthlyBudget
@@ -700,10 +832,23 @@ console.log(
           }
         }
 
+        // 42501 = RLS rejected the insert (no session / not a student /
+        // ownership mismatch). 23502 = user_id violated a NOT NULL rule.
+        // The fail-closed gate above should make both impossible, but never
+        // surface raw database/RLS details to the student.
+        if (insertError.code === "42501" || insertError.code === "23502") {
+          setError(
+            "Please sign in or create a student account before submitting a requirement.",
+          );
+          setLoginNeeded(true);
+          return;
+        }
+
+        // Generic database failure: log the detail for debugging, show only a
+        // friendly message to the student.
+        console.error("REQUIREMENT INSERT ERROR:", insertError);
         setError(
-          isUrdu
-            ? copy.ur.dbError + insertError.message
-            : copy.en.dbError + insertError.message
+          isUrdu ? copy.ur.genericError : copy.en.genericError
         );
         return;
       }
@@ -1269,16 +1414,83 @@ console.log(
                 <select
                   value={preferredTime}
                   onChange={(e) =>
-                    setPreferredTime(e.target.value)
+                    changePreferredTime(e.target.value)
                   }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3"
                 >
-                  <option>{isUrdu ? optionUrduLabels["Morning"] : "Morning"}</option>
-                  <option>{isUrdu ? optionUrduLabels["Afternoon"] : "Afternoon"}</option>
-                  <option>{isUrdu ? optionUrduLabels["Evening"] : "Evening"}</option>
-                  <option>{isUrdu ? optionUrduLabels["Night"] : "Night"}</option>
-                  <option>{isUrdu ? optionUrduLabels["Flexible"] : "Flexible"}</option>
+                  <option value="Morning">{isUrdu ? optionUrduLabels["Morning"] : "Morning"}</option>
+                  <option value="Afternoon">{isUrdu ? optionUrduLabels["Afternoon"] : "Afternoon"}</option>
+                  <option value="Evening">{isUrdu ? optionUrduLabels["Evening"] : "Evening"}</option>
+                  <option value="Night">{isUrdu ? optionUrduLabels["Night"] : "Night"}</option>
+                  <option value="Flexible">{isUrdu ? optionUrduLabels["Flexible"] : "Flexible"}</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block font-semibold">
+                  {isUrdu
+                    ? copy.ur.classDurationLabel
+                    : copy.en.classDurationLabel}
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[30, 60].map((minutes) => (
+                    <button
+                      key={minutes}
+                      type="button"
+                      onClick={() => changeClassDuration(minutes)}
+                      className={`rounded-xl border px-4 py-3 font-semibold transition-all ${
+                        classDuration === minutes
+                          ? "border-blue-600 bg-blue-600 text-white shadow-md"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+                      }`}
+                    >
+                      {minutes === 30
+                        ? isUrdu
+                          ? copy.ur.duration30Label
+                          : copy.en.duration30Label
+                        : isUrdu
+                          ? copy.ur.duration60Label
+                          : copy.en.duration60Label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-3 block font-semibold">
+                  {isUrdu ? copy.ur.startTimeLabel : copy.en.startTimeLabel}
+                </label>
+
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                  {getAvailableStartSlots(preferredTime, classDuration).map(
+                    (slot) => {
+                      const selected = preferredStartTimes.includes(slot);
+
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => toggleStartTime(slot)}
+                          className={`rounded-xl border px-3 py-3 text-sm font-semibold transition-all ${
+                            selected
+                              ? "border-blue-600 bg-blue-600 text-white shadow-md"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+                          }`}
+                        >
+                          <span className="flex items-center justify-center gap-1.5">
+                            {selected && <span>✓</span>}
+                            {slot}
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+
+                <p className="mt-3 text-sm text-slate-500">
+                  {isUrdu ? copy.ur.startTimeHelper : copy.en.startTimeHelper}
+                </p>
               </div>
 
               <div className="md:col-span-2">

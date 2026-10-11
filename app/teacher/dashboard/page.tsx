@@ -36,6 +36,8 @@ type Requirement = {
   classes_per_week: string | null;
   preferred_time: string | null;
   preferred_days: string | null;
+  class_duration_minutes: number | null;
+  preferred_start_times: string[] | null;
   monthly_budget: number | null;
   additional_requirement: string | null;
   status: string;
@@ -915,6 +917,28 @@ const activeClasses = 0;
           </p>
           <p className="mt-1 font-semibold">
             {selectedRequirement.preferred_time || "Not provided"}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-semibold text-slate-500">
+            Class Duration
+          </p>
+          <p className="mt-1 font-semibold">
+            {selectedRequirement.class_duration_minutes
+              ? `${selectedRequirement.class_duration_minutes} minutes`
+              : "Not provided"}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-semibold text-slate-500">
+            Preferred Start Times
+          </p>
+          <p className="mt-1 font-semibold">
+            {selectedRequirement.preferred_start_times?.length
+              ? selectedRequirement.preferred_start_times.join(", ")
+              : "Not provided"}
           </p>
         </div>
 
