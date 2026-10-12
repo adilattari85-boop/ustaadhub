@@ -22,6 +22,7 @@ type Requirement = {
   preferred_start_times: string[] | null;
   additional_requirement: string | null;
   status: string | null;
+  deleted_at: string | null;
   created_at: string;
 };
 
@@ -102,6 +103,7 @@ export default function TeacherRequirementPage() {
                 preferred_start_times,
                 additional_requirement,
                 status,
+                deleted_at,
                 created_at
               `,
             )
@@ -139,6 +141,13 @@ export default function TeacherRequirementPage() {
 
   async function handleMatchAction(response: "accepted" | "rejected") {
     if (!match) {
+      return;
+    }
+
+    if (!requirement || requirement.deleted_at !== null) {
+      setError(
+        "This requirement has been deactivated by the admin, so it can no longer be accepted or rejected.",
+      );
       return;
     }
 
@@ -417,9 +426,15 @@ export default function TeacherRequirementPage() {
                       ? "You rejected this requirement."
                       : "Response required"}
                 </p>
+
+                {requirement.deleted_at !== null && (
+                  <p className="mt-2 text-sm font-semibold text-orange-600">
+                    Deactivated by admin — accepting or rejecting is disabled.
+                  </p>
+                )}
               </div>
 
-              {!isAccepted && !isRejected && (
+              {!isAccepted && !isRejected && requirement.deleted_at === null && (
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
