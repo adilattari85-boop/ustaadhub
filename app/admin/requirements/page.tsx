@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type RequirementStatus = "pending" | "contacted" | "matched" | "closed";
+type RequirementStatus = "pending" | "contacted" | "matched" | "closed" | "no_response";
 type Requirement = {
   id: string;
   user_id: string;
@@ -48,6 +48,7 @@ const statuses: Array<"All" | RequirementStatus> = [
   "pending",
   "contacted",
   "matched",
+  "no_response",
   "closed",
 ];
 
@@ -62,6 +63,7 @@ export default function AdminRequirementsPage() {
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [errorTitle, setErrorTitle] = useState("Could not load requirements");
 
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -71,6 +73,11 @@ const [teacherLoading, setTeacherLoading] = useState(false);
   const [requirementActionError, setRequirementActionError] = useState("");
 const [connectingTeacherId, setConnectingTeacherId] =
   useState<string | null>(null);
+
+  function showError(title: string, message: string) {
+    setErrorTitle(title);
+    setError(message);
+  }
 
   async function verifyAdmin() {
     const {
@@ -108,14 +115,15 @@ const [connectingTeacherId, setConnectingTeacherId] =
         .order("created_at", { ascending: false });
 
       if (requirementsError) {
-        setError(requirementsError.message);
+        showError("Could not load requirements", requirementsError.message);
         setRequirements([]);
         return;
       }
 
       setRequirements((data || []) as Requirement[]);
     } catch (err) {
-      setError(
+      showError(
+        "Could not load requirements",
         err instanceof Error
           ? err.message
           : "Something went wrong while loading requirements."
@@ -142,7 +150,7 @@ async function loadVerifiedTeachers() {
 
   if (teacherError) {
     console.error("TEACHER LOAD ERROR:", teacherError);
-    setError(`Could not load teachers: ${teacherError.message}`);
+    showError("Could not load teachers", `Could not load teachers: ${teacherError.message}`);
     setTeachers([]);
     setTeacherLoading(false);
     return;
@@ -165,7 +173,8 @@ async function connectTeacherToRequirement(
 
   if (rpcError) {
     console.error("TEACHER MATCH ERROR:", rpcError);
-    setError(
+    showError(
+      "Could not connect teacher",
       rpcError.message
         ? `Could not connect teacher: ${rpcError.message}`
         : "Could not connect teacher."
@@ -209,7 +218,7 @@ async function connectTeacherToRequirement(
       .single();
 
     if (updateError) {
-      setError(updateError.message);
+      showError("Could not update requirement status", updateError.message);
       setStatusUpdating(false);
       return;
     }
@@ -221,7 +230,11 @@ async function connectTeacherToRequirement(
         item.id === updatedRequirement.id ? updatedRequirement : item
       )
     );
-    setSelectedRequirement(updatedRequirement);
+    // Sync the drawer only when it is already open on this requirement;
+    // row/card status actions must never auto-open the modal.
+    setSelectedRequirement((current) =>
+      current?.id === updatedRequirement.id ? updatedRequirement : current
+    );
     setStatusUpdating(false);
   }
 
@@ -277,6 +290,50 @@ async function connectTeacherToRequirement(
       setSelectedRequirement(updated);
     }
     setRequirementActionId(null);
+  }
+
+  async function handleMarkNoResponse(requirement: Requirement) {
+    if (getStatus(requirement) !== "pending") {
+      showError(
+        "Could not update requirement status",
+        "Only pending requirements can be marked as No Response."
+      );
+      return;
+    }
+
+    if (!confirm(`Mark requirement for "${requirement.parent_student_name || "this student"}" as "No Response"?\n\nIt will leave the pending list. You can reopen it to pending later.`)) {
+      return;
+    }
+
+    setRequirementActionId(requirement.id);
+    setRequirementActionError("");
+    try {
+      await updateStatus(requirement, "no_response");
+    } finally {
+      setRequirementActionId(null);
+    }
+  }
+
+  async function handleReopenNoResponse(requirement: Requirement) {
+    if (getStatus(requirement) !== "no_response") {
+      showError(
+        "Could not update requirement status",
+        "Only No Response requirements can be reopened to pending."
+      );
+      return;
+    }
+
+    if (!confirm(`Reopen requirement for "${requirement.parent_student_name || "this student"}" back to pending?`)) {
+      return;
+    }
+
+    setRequirementActionId(requirement.id);
+    setRequirementActionError("");
+    try {
+      await updateStatus(requirement, "pending");
+    } finally {
+      setRequirementActionId(null);
+    }
   }
 
   async function handleLogout() {
@@ -409,9 +466,7 @@ async function connectTeacherToRequirement(
         {/* ERROR */}
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <p className="font-semibold">
-              Could not load requirements
-            </p>
+            <p className="font-semibold">{errorTitle}</p>
 
             <p className="mt-1">{error}</p>
 
@@ -553,7 +608,9 @@ async function connectTeacherToRequirement(
                               ? "bg-orange-100 text-orange-700"
                               : status === "matched"
                                 ? "bg-green-100 text-green-700"
-                                : "bg-slate-100 text-slate-700"
+                                : status === "no_response"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : "bg-slate-100 text-slate-700"
                         }`}
                       >
                         {status}
@@ -648,6 +705,26 @@ async function connectTeacherToRequirement(
                         className="mt-2 w-full rounded-lg border border-emerald-500 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {requirementActionId === item.id ? "Restoring..." : "Restore"}
+                      </button>
+                    )}
+                    {item.deleted_at === null && status === "pending" && (
+                      <button
+                        type="button"
+                        onClick={() => void handleMarkNoResponse(item)}
+                        disabled={requirementActionId === item.id}
+                        className="mt-2 w-full rounded-lg border border-purple-500 bg-white px-4 py-2.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {requirementActionId === item.id ? "Saving..." : "Mark No Response"}
+                      </button>
+                    )}
+                    {item.deleted_at === null && status === "no_response" && (
+                      <button
+                        type="button"
+                        onClick={() => void handleReopenNoResponse(item)}
+                        disabled={requirementActionId === item.id}
+                        className="mt-2 w-full rounded-lg border border-blue-500 bg-white px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {requirementActionId === item.id ? "Saving..." : "Reopen to Pending"}
                       </button>
                     )}
                     {requirementActionId === item.id && requirementActionError && (
@@ -749,6 +826,8 @@ async function connectTeacherToRequirement(
                                 ? "bg-orange-100 text-orange-700"
                                 : status === "matched"
                                 ? "bg-green-100 text-green-700"
+                                : status === "no_response"
+                                ? "bg-purple-100 text-purple-700"
                                 : "bg-slate-100 text-slate-700"
                             }`}
                           >
@@ -783,6 +862,24 @@ async function connectTeacherToRequirement(
                               className="rounded-lg border border-emerald-500 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {requirementActionId === item.id ? "Restoring..." : "Restore"}
+                            </button>
+                          )}
+                          {item.deleted_at === null && status === "pending" && (
+                            <button
+                              onClick={() => void handleMarkNoResponse(item)}
+                              disabled={requirementActionId === item.id}
+                              className="mt-2 rounded-lg border border-purple-500 bg-white px-3 py-1.5 text-xs font-semibold text-purple-600 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {requirementActionId === item.id ? "Saving..." : "Mark No Response"}
+                            </button>
+                          )}
+                          {item.deleted_at === null && status === "no_response" && (
+                            <button
+                              onClick={() => void handleReopenNoResponse(item)}
+                              disabled={requirementActionId === item.id}
+                              className="mt-2 rounded-lg border border-blue-500 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {requirementActionId === item.id ? "Saving..." : "Reopen to Pending"}
                             </button>
                           )}
                           {requirementActionId === item.id && requirementActionError && (
@@ -1026,6 +1123,7 @@ async function connectTeacherToRequirement(
                 <option value="pending">pending</option>
                 <option value="contacted">contacted</option>
                 <option value="matched">matched</option>
+                <option value="no_response">no_response</option>
                 <option value="closed">closed</option>
               </select>
             </div>
